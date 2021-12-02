@@ -75,7 +75,8 @@
       }
     }
   }
-  SEED = "" + new Date().getTime();
+  // SEED = "" + new Date().getTime();
+  SEED = 10000000;
   parseArgs({
     seed: function(x) {
       SEED = x == "" ? SEED : x;
@@ -740,32 +741,34 @@
     return ret ? texlist : canv;
   };
 
+  function times(n, fun) {
+    return Array.from({length: n}, (_, i) => fun(i));
+  }
+
+  Array.prototype.zip = function(...others) {
+    return this.map((el, i) => [el, ...others.map(o => o[i])]);
+  }
+
   var Tree = new function() {
-    this.tree01 = function(x, y, args) {
-      var args = args != undefined ? args : {};
-      var hei = args.hei != undefined ? args.hei : 50;
-      var wid = args.wid != undefined ? args.wid : 3;
-      var col = args.col != undefined ? args.col : "rgba(100,100,100,0.5)";
-      var noi = args.noi != undefined ? args.noi : 0.5;
+    this.tree01 = function(x, y, { hei = 50, wid = 3, col = "rgba(100,100,100,0.5)", noi = 0.5 }) {
+      col = "rgba(255,0,0,0.5)";
 
       reso = 10;
-      var nslist = [];
-      for (var i = 0; i < reso; i++) {
-        nslist.push([Noise.noise(i * 0.5), Noise.noise(i * 0.5, 0.5)]);
-      }
+      var nslist = times(reso, i => [Noise.noise(i * 0.5), Noise.noise(i * 0.5, 0.5)]);
 
-      var leafcol;
-      if (col.includes("rgba(")) {
-        leafcol = col
-          .replace("rgba(", "")
-          .replace(")", "")
-          .split(",");
-      } else {
-        leafcol = ["100", "100", "100", "0.5"];
-      }
+      var leafcol = col.replace("rgba(", "").replace(")", "").split(",");
+
+      var nxs = times(reso, i => x);
+      var nys = times(reso, i => y - (i * hei) / reso);
+
       var canv = "";
-      var line1 = [];
-      var line2 = [];
+      var line1 = nxs.zip(nys, nslist).map(
+        ([nx, ny, [ns, _]]) => [nx + (ns - 0.5) * wid - wid / 2, ny]
+      );
+
+      var line2 = nxs.zip(nys, nslist).map(
+        ([nx, ny, [_, ns]]) => [nx + (ns - 0.5) * wid + wid / 2, ny]
+      );
       for (var i = 0; i < reso; i++) {
         var nx = x;
         var ny = y - (i * hei) / reso;
@@ -792,8 +795,6 @@
             );
           }
         }
-        line1.push([nx + (nslist[i][0] - 0.5) * wid - wid / 2, ny]);
-        line2.push([nx + (nslist[i][1] - 0.5) * wid + wid / 2, ny]);
       }
       canv +=
         poly(line1, { fil: "none", str: col, wid: 1.5 }) +
