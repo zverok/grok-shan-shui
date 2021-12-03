@@ -745,23 +745,51 @@
     return Array.from({length: n}, (_, i) => fun(i));
   }
 
+  function range(n) {
+    return Array.from({length: Math.ceil(n)}, (_, i) => i);
+  }
+
   Array.prototype.zip = function(...others) {
     return this.map((el, i) => [el, ...others.map(o => o[i])]);
   }
 
+  class RGBA {
+    constructor(r, g, b, a) {
+      this.r = r
+      this.g = g
+      this.b = b
+      this.a = a
+    }
+
+    toString() {
+      return `rgba(${this.r.toFixed()},${this.g.toFixed()},${this.b.toFixed()},${this.a.toFixed(1)})`
+    }
+
+    merge({r, g, b, a}) {
+      return new RGBA(r || this.r, g || this.g, b || this.b, a || this.a)
+    }
+  }
+
+  function rgba(r, g, b, a) { return new RGBA(r, g, b, a) }
+
+  function rand(from, to=undefined) {
+    if (to == undefined) {
+      to = from;
+      from = 0;
+    }
+    return Math.random() * (to - from) + from
+  }
+
   var Tree = new function() {
     this.tree01 = function(x, y, { hei = 50, wid = 3, col = "rgba(100,100,100,0.5)", noi = 0.5 }) {
-      col = "rgba(255,0,0,0.5)";
+      col = rgba(255, 0, 0, 0.5);
 
       reso = 10;
       var nslist = times(reso, i => [Noise.noise(i * 0.5), Noise.noise(i * 0.5, 0.5)]);
 
-      var leafcol = col.replace("rgba(", "").replace(")", "").split(",");
-
       var nxs = times(reso, i => x);
       var nys = times(reso, i => y - (i * hei) / reso);
 
-      var canv = "";
       var line1 = nxs.zip(nys, nslist).map(
         ([nx, ny, [ns, _]]) => [nx + (ns - 0.5) * wid - wid / 2, ny]
       );
@@ -769,36 +797,26 @@
       var line2 = nxs.zip(nys, nslist).map(
         ([nx, ny, [_, ns]]) => [nx + (ns - 0.5) * wid + wid / 2, ny]
       );
-      for (var i = 0; i < reso; i++) {
-        var nx = x;
-        var ny = y - (i * hei) / reso;
-        if (i >= reso / 4) {
-          for (var j = 0; j < (reso - i) / 5; j++) {
-            canv += blob(
-              nx + (Math.random() - 0.5) * wid * 1.2 * (reso - i),
-              ny + (Math.random() - 0.5) * wid,
+      var canv =
+        range(reso).zip(nxs, nys).slice(reso / 4 + 1).flatMap(
+          ([i, nx, ny]) => {
+            point = reso - i
+            return range(point / 5).map(() => blob(
+              nx + rand(-0.5, 0.5) * wid * 1.2 * point,
+              ny + rand(-0.5, 0.5) * wid,
               {
-                len: Math.random() * 20 * (reso - i) * 0.2 + 10,
-                wid: Math.random() * 6 + 3,
-                ang: ((Math.random() - 0.5) * Math.PI) / 6,
-                col:
-                  "rgba(" +
-                  leafcol[0] +
-                  "," +
-                  leafcol[1] +
-                  "," +
-                  leafcol[2] +
-                  "," +
-                  (Math.random() * 0.2 + parseFloat(leafcol[3])).toFixed(1) +
-                  ")",
+                len: rand(20) * point * 0.2 + 10,
+                wid: rand(6) + 3,
+                ang: rand(-0.5, 0.5) * Math.PI / 6,
+                col: col.merge({a: rand(0.2) + col.a}).toString(),
               },
-            );
+            ))
           }
-        }
-      }
+        ).join()
+
       canv +=
-        poly(line1, { fil: "none", str: col, wid: 1.5 }) +
-        poly(line2, { fil: "none", str: col, wid: 1.5 });
+        poly(line1, { fil: "none", str: col.toString(), wid: 1.5 }) +
+        poly(line2, { fil: "none", str: col.toString(), wid: 1.5 });
       return canv;
     };
     this.tree02 = function(x, y, args) {
