@@ -509,6 +509,14 @@
       "'/>";
     return canv;
   }
+
+  function poly_(points, {x_offset = 0, y_offset = 0, fill = rgba(0, 0, 0, 0), stroke, width = 0}) {
+    stroke ||= fill
+
+    return "<polyline points='" +
+      points.map( ([x, y]) => `${(x + x_offset).toFixed(1)},${(y + y_offset).toFixed(1)}` ).join(' ') +
+      `' style='fill: ${fill};stroke: ${stroke};stroke-width: ${width}'/>`
+  }
 </script>
 
 <script>
@@ -622,6 +630,44 @@
       return poly(plist, { fil: col, str: col, wid: 0 });
     } else {
       return plist;
+    }
+  }
+
+  function blob_(x, y, {
+      length = 20,
+      width = 5,
+      angle = 0,
+      color = rgba(200, 200, 200, 0.9),
+      noise = 0.5,
+      render = true,
+      fun}) {
+
+    fun ||= (x) => x <= 1 ? Math.pow(Math.sin(x * Math.PI), 0.5) : -Math.pow(Math.sin((x + 1) * Math.PI), 0.5)
+
+    var resolution = 20.0;
+    var las = range(resolution + 1).map( i => {
+      var p = (i / resolution) * 2;
+      var xo = length / 2 - Math.abs(p - 1) * length;
+      var yo = (fun(p) * width) / 2;
+      var a = Math.atan2(yo, xo);
+      var l = Math.sqrt(xo * xo + yo * yo);
+      return [l, a];
+    })
+
+    var n0 = Math.random() * 10;
+    var noises = range(resolution + 1).
+                  map( i => Noise.noise(i * 0.05, n0)).
+                  map( n => n * noise + (1 - noise))
+
+    loopNoise(noises);
+    var points = las.zip(noises).map(
+      ([[l, a], n]) => [x + Math.cos(a + angle) * l * n, y + Math.sin(a + angle) * l * n]
+    )
+
+    if (render) {
+      return poly_(points, { fill: color, stroke: color, width: 0 });
+    } else {
+      return points;
     }
   }
 
@@ -781,43 +827,40 @@
   }
 
   var Tree = new function() {
-    this.tree01 = function(x, y, { hei = 50, wid = 3, col = "rgba(100,100,100,0.5)", noi = 0.5 }) {
-      col = rgba(255, 0, 0, 0.5);
+    this.tree01 = function(x, y, {height = 50, width = 3, color = rgba(100,100,100,0.5), noise = 0.5 }) {
+      color = rgba(255, 0, 0, 0.5);
 
-      reso = 10;
-      var nslist = times(reso, i => [Noise.noise(i * 0.5), Noise.noise(i * 0.5, 0.5)]);
+      resolution = 10;
 
-      var nxs = times(reso, i => x);
-      var nys = times(reso, i => y - (i * hei) / reso);
+      var points = range(resolution).map(i => ({x, y: y - (i * height) / resolution}))
 
-      var line1 = nxs.zip(nys, nslist).map(
-        ([nx, ny, [ns, _]]) => [nx + (ns - 0.5) * wid - wid / 2, ny]
+      var trunk1 = points.map(
+        (point, i) => [point.x - width / 2 + width * (Noise.noise(i * 0.5) - 0.5), point.y]
       );
 
-      var line2 = nxs.zip(nys, nslist).map(
-        ([nx, ny, [_, ns]]) => [nx + (ns - 0.5) * wid + wid / 2, ny]
+      var trunk2 = points.map(
+        (point, i) => [point.x + width / 2 + width * (Noise.noise(i * 0.5, 0.5) - 0.5), point.y]
       );
-      var canv =
-        range(reso).zip(nxs, nys).slice(reso / 4 + 1).flatMap(
-          ([i, nx, ny]) => {
-            point = reso - i
-            return range(point / 5).map(() => blob(
-              nx + rand(-0.5, 0.5) * wid * 1.2 * point,
-              ny + rand(-0.5, 0.5) * wid,
+      var crowns =
+        range(resolution).zip(points).slice(resolution / 4 + 1).flatMap(
+          ([i, point]) => {
+            to_top = resolution - i
+            return range(to_top / 5).map(() => [
+              point.x + rand(-0.5, 0.5) * width * 1.2 * to_top,
+              point.y + rand(-0.5, 0.5) * width,
               {
-                len: rand(20) * point * 0.2 + 10,
-                wid: rand(6) + 3,
-                ang: rand(-0.5, 0.5) * Math.PI / 6,
-                col: col.merge({a: rand(0.2) + col.a}).toString(),
+                length: rand(20) * to_top * 0.2 + 10,
+                width: rand(6) + 3,
+                angle: rand(-0.5, 0.5) * Math.PI / 6,
+                color: color.merge({a: rand(0.2) + color.a}),
               },
-            ))
+            ])
           }
-        ).join()
+        )
 
-      canv +=
-        poly(line1, { fil: "none", str: col.toString(), wid: 1.5 }) +
-        poly(line2, { fil: "none", str: col.toString(), wid: 1.5 });
-      return canv;
+      return crowns.map( ([x, y, args]) => blob_(x, y, args)).join() +
+             poly_(trunk1, { fill: "none", stroke: color, width: 1.5 }) +
+             poly_(trunk2, { fill: "none", stroke: color, width: 1.5 });
     };
     this.tree02 = function(x, y, args) {
       var args = args != undefined ? args : {};
@@ -1941,9 +1984,9 @@
             var ht = ((h + y) / h) * 70;
             ht = ht * 0.3 + Math.random() * ht * 0.7;
             return Tree.tree01(x + xoff, y + yoff, {
-              hei: ht,
-              wid: Math.random() * 3 + 1,
-              col:
+              height: ht,
+              width: Math.random() * 3 + 1,
+              color:
                 "rgba(100,100,100," +
                 (Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3).toFixed(3) +
                 ")",
