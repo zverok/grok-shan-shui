@@ -609,6 +609,7 @@
       var yo = (fun(p) * wid) / 2;
       var a = Math.atan2(yo, xo);
       var l = Math.sqrt(xo * xo + yo * yo);
+      if(args.debug && i == 0) { console.log({len, p, xo, yo, a, l}) }
       lalist.push([l, a]);
     }
     var nslist = [];
@@ -625,6 +626,7 @@
       var ny = y + Math.sin(lalist[i][1] + ang) * lalist[i][0] * ns;
       plist.push([nx, ny]);
     }
+    if (args.debug) { console.log({lalist, nslist, plist}) }
 
     if (ret == 0) {
       return poly(plist, { fil: col, str: col, wid: 0 });
@@ -640,6 +642,7 @@
       color = rgba(200, 200, 200, 0.9),
       noise = 0.5,
       render = true,
+      debug = false,
       fun}) {
 
     fun ||= (x) => x <= 1 ? Math.pow(Math.sin(x * Math.PI), 0.5) : -Math.pow(Math.sin((x + 1) * Math.PI), 0.5)
@@ -651,18 +654,20 @@
       var yo = (fun(p) * width) / 2;
       var a = Math.atan2(yo, xo);
       var l = Math.sqrt(xo * xo + yo * yo);
+      if(debug && i == 0) { console.log({length, p, xo, yo, a, l}) }
       return [l, a];
     })
 
     var n0 = Math.random() * 10;
     var noises = range(resolution + 1).
                   map( i => Noise.noise(i * 0.05, n0)).
+                  tap(loopNoise).
                   map( n => n * noise + (1 - noise))
 
-    loopNoise(noises);
     var points = las.zip(noises).map(
       ([[l, a], n]) => [x + Math.cos(a + angle) * l * n, y + Math.sin(a + angle) * l * n]
     )
+    if (debug) { console.log({las, noises, points}) }
 
     if (render) {
       return poly_(points, { fill: color, stroke: color, width: 0 });
@@ -826,6 +831,9 @@
     return Math.random() * (to - from) + from
   }
 
+  Object.prototype.and_then = function(f) { return f(this) }
+  Object.prototype.tap = function(f) { f(this); return this }
+
   var Tree = new function() {
     this.tree01 = function(x, y, {height = 50, width = 3, color = rgba(100,100,100,0.5), noise = 0.5 }) {
       color = rgba(255, 0, 0, 0.5);
@@ -836,16 +844,17 @@
 
       var trunk1 = points.map(
         (point, i) => [point.x - width / 2 + width * (Noise.noise(i * 0.5) - 0.5), point.y]
-      );
+      ).and_then( points => poly_(points, { fill: "none", stroke: color, width: 1.5 }));
 
       var trunk2 = points.map(
         (point, i) => [point.x + width / 2 + width * (Noise.noise(i * 0.5, 0.5) - 0.5), point.y]
-      );
+      ).and_then( points => poly_(points, { fill: "none", stroke: color, width: 1.5 }));
+
       var crowns =
         range(resolution).zip(points).slice(resolution / 4 + 1).flatMap(
           ([i, point]) => {
             to_top = resolution - i
-            return range(to_top / 5).map(() => [
+            return range(to_top / 5).map(() => blob_(
               point.x + rand(-0.5, 0.5) * width * 1.2 * to_top,
               point.y + rand(-0.5, 0.5) * width,
               {
@@ -854,52 +863,28 @@
                 angle: rand(-0.5, 0.5) * Math.PI / 6,
                 color: color.merge({a: rand(0.2) + color.a}),
               },
-            ])
+            ))
           }
-        )
+        ).join()
 
-      return crowns.map( ([x, y, args]) => blob_(x, y, args)).join() +
-             poly_(trunk1, { fill: "none", stroke: color, width: 1.5 }) +
-             poly_(trunk2, { fill: "none", stroke: color, width: 1.5 });
+      return crowns + trunk1 + trunk2
     };
-    this.tree02 = function(x, y, args) {
-      var args = args != undefined ? args : {};
-      var hei = args.hei != undefined ? args.hei : 16;
-      var wid = args.wid != undefined ? args.wid : 8;
-      var clu = args.clu != undefined ? args.clu : 5;
-      var col = args.col != undefined ? args.col : "rgba(100,100,100,0.5)";
-      var noi = args.noi != undefined ? args.noi : 0.5;
+    this.tree02 = function(x, y, {height = 16, width = 8, clu = 5, color = rgba(100,100,100,0.5), noise = 0.5}) {
+      color = rgba(0, 0, 255, 0.5)
 
-      var leafcol;
-      if (col.includes("rgba(")) {
-        leafcol = col
-          .replace("rgba(", "")
-          .replace(")", "")
-          .split(",");
-      } else {
-        leafcol = ["100", "100", "100", "0.5"];
-      }
-
-      var canv = "";
-      for (var i = 0; i < clu; i++) {
-        canv += blob(
-          x + randGaussian() * clu * 4,
-          y + randGaussian() * clu * 4,
-          {
-            ang: Math.PI / 2,
-            col: "rgba(100,100,100,0.8)",
-            fun: function(x) {
-              return x <= 1
-                ? Math.pow(Math.sin(x * Math.PI) * x, 0.5)
-                : -Math.pow(Math.sin((x - 2) * Math.PI * (x - 2)), 0.5);
-            },
-            wid: Math.random() * wid * 0.75 + wid * 0.5,
-            len: Math.random() * hei * 0.75 + hei * 0.5,
-            col: col,
-          },
-        );
-      }
-      return canv;
+      return range(clu).map( i => blob_(
+        x + randGaussian() * clu * 4,
+        y + randGaussian() * clu * 4,
+        {
+          angle: Math.PI / 2,
+          fun: (x) => x <= 1 ?
+                      Math.pow(Math.sin(x * Math.PI) * x, 0.5) :
+                      -Math.pow(Math.sin((x - 2) * Math.PI * (x - 2)), 0.5),
+          width: width * 0.5 + rand(width * 0.75),
+          length: height * 0.5 + rand(height * 0.75),
+          color: color
+        },
+      )).join();
     };
     this.tree03 = function(x, y, args) {
       var args = args != undefined ? args : {};
@@ -1916,10 +1901,7 @@
       vegetate(
         function(x, y) {
           return Tree.tree02(x + xoff, y + yoff - 5, {
-            col:
-              "rgba(100,100,100," +
-              (Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5).toFixed(3) +
-              ")",
+            color: rgba(100,100,100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5),
             clu: 2,
           });
         },
@@ -1962,10 +1944,7 @@
       vegetate(
         function(x, y) {
           return Tree.tree02(x + xoff, y + yoff, {
-            col:
-              "rgba(100,100,100," +
-              (Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5).toFixed(3) +
-              ")",
+            color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5),
           });
         },
         function(i, j) {
@@ -2408,6 +2387,7 @@
         canv += Tree.tree02(
           xoff + normRand(grbd.xmin, grbd.xmax),
           yoff + normRand(grbd.ymin, grbd.ymax),
+          {}
         );
       }
 
