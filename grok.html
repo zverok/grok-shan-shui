@@ -886,81 +886,52 @@
         },
       )).join();
     };
-    this.tree03 = function(x, y, args) {
-      var args = args != undefined ? args : {};
-      var hei = args.hei != undefined ? args.hei : 50;
-      var wid = args.wid != undefined ? args.wid : 5;
-      var ben =
-        args.ben != undefined
-          ? args.ben
-          : function(x) {
-              return 0;
-            };
-      var col = args.col != undefined ? args.col : "rgba(100,100,100,0.5)";
-      var noi = args.noi != undefined ? args.noi : 0.5;
 
-      reso = 10;
-      var nslist = [];
-      for (var i = 0; i < reso; i++) {
-        nslist.push([Noise.noise(i * 0.5), Noise.noise(i * 0.5, 0.5)]);
-      }
+    Array.prototype.sample = function() { return this[Math.floor(rand(this.length))] }
 
-      var leafcol;
-      if (col.includes("rgba(")) {
-        leafcol = col
-          .replace("rgba(", "")
-          .replace(")", "")
-          .split(",");
-      } else {
-        leafcol = ["100", "100", "100", "0.5"];
-      }
-      var canv = "";
-      var blobs = "";
-      var line1 = [];
-      var line2 = [];
-      for (var i = 0; i < reso; i++) {
-        var nx = x + ben(i / reso) * 100;
-        var ny = y - (i * hei) / reso;
-        if (i >= reso / 5) {
-          for (var j = 0; j < (reso - i) * 2; j++) {
-            var shape = function(x) {
-              return Math.log(50 * x + 1) / 3.95;
-            };
-            var ox = Math.random() * wid * 2 * shape((reso - i) / reso);
-            blobs += blob(
-              nx + ox * randChoice([-1, 1]),
-              ny + (Math.random() - 0.5) * wid * 2,
+    this.tree03 = function(x, y, {height = 50, width = 5, bending = (x)=>0, color = rgba(100,100,100,0.5), noise = 0.5}) {
+      color = rgba(0,255,0,0.5);
+
+      resolution = 10;
+
+      var points = range(resolution).map(
+        i => ({x: x + bending(i / resolution) * 100, y: y - (i * height) / resolution})
+      )
+      var line1 = points.map(
+        (p, i) => [
+          p.x + ((Noise.noise(i * 0.5) - 0.5) * width - width / 2) * (resolution - i) / resolution,
+          p.y
+        ]
+      )
+      var line2 = points.map(
+        (p, i) => [
+          p.x + ((Noise.noise(i * 0.5, 0.5) - 0.5) * width + width / 2) * (resolution - i) / resolution,
+          p.y,
+        ]
+      )
+
+      var shape = (x) => Math.log(50 * x + 1) / 3.95;
+      var blobs = range(resolution).zip(points).slice(resolution / 5).flatMap(
+        ([i, point]) => range((resolution - i) * 2).map(
+          j => {
+            var half_length = rand(width * 2) * shape((resolution - i) / resolution);
+            return blob_(
+              point.x + [-half_length, half_length].sample(),
+              point.y + rand(-width, width),
               {
-                len: ox * 2,
-                wid: Math.random() * 6 + 3,
-                ang: ((Math.random() - 0.5) * Math.PI) / 6,
-                col:
-                  "rgba(" +
-                  leafcol[0] +
-                  "," +
-                  leafcol[1] +
-                  "," +
-                  leafcol[2] +
-                  "," +
-                  (Math.random() * 0.2 + parseFloat(leafcol[3])).toFixed(3) +
-                  ")",
+                length: half_length * 2,
+                width: rand(6) + 3,
+                angle: rand(-0.5, 0.5) * Math.PI / 6,
+                color: color.merge({a: rand(0.2) + color.a}),
               },
             );
           }
-        }
-        line1.push([
-          nx + (((nslist[i][0] - 0.5) * wid - wid / 2) * (reso - i)) / reso,
-          ny,
-        ]);
-        line2.push([
-          nx + (((nslist[i][1] - 0.5) * wid + wid / 2) * (reso - i)) / reso,
-          ny,
-        ]);
-      }
-      var lc = line1.concat(line2.reverse());
-      canv += poly(lc, { fil: "white", str: col, wid: 1.5 });
-      canv += blobs;
-      return canv;
+        )
+      )
+
+      return line1.concat(line2.reverse()).
+                and_then( line => poly_(line, { fill: "white", stroke: color, width: 1.5 }) ) +
+                blobs.join()
     };
 
     var branch = function(args) {
@@ -2006,14 +1977,9 @@
             var bc = Math.random() * 0.1;
             var bp = 1;
             return Tree.tree03(x + xoff, y + yoff, {
-              hei: ht,
-              ben: function(x) {
-                return Math.pow(x * bc, bp);
-              },
-              col:
-                "rgba(100,100,100," +
-                (Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3).toFixed(3) +
-                ")",
+              height: ht,
+              bending: (x) => Math.pow(x * bc, bp),
+              color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3),
             });
           },
           function(i, j) {
@@ -3887,8 +3853,8 @@
   function chunkloader(xmin, xmax) {
     var add = function(nch) {
       if (nch.canv.includes("NaN")) {
-        console.log("gotcha:");
-        console.log(nch.tag);
+        // console.log("gotcha:");
+        // console.log(nch.tag);
         nch.canv = nch.canv.replace(/NaN/g, -1000);
       }
       if (MEM.chunks.length == 0) {
