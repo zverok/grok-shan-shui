@@ -836,8 +836,6 @@
 
   var Tree = new function() {
     this.tree01 = function(x, y, {height = 50, width = 3, color = rgba(100,100,100,0.5), noise = 0.5 }) {
-      color = rgba(255, 0, 0, 0.5);
-
       resolution = 10;
 
       var points = range(resolution).map(i => ({x, y: y - (i * height) / resolution}))
@@ -870,7 +868,6 @@
       return crowns + trunk1 + trunk2
     };
     this.tree02 = function(x, y, {height = 16, width = 8, clu = 5, color = rgba(100,100,100,0.5), noise = 0.5}) {
-      color = rgba(0, 0, 255, 0.5)
 
       return range(clu).map( i => blob_(
         x + randGaussian() * clu * 4,
@@ -890,7 +887,6 @@
     Array.prototype.sample = function() { return this[Math.floor(rand(this.length))] }
 
     this.tree03 = function(x, y, {height = 50, width = 5, bending = (x)=>0, color = rgba(100,100,100,0.5), noise = 0.5}) {
-      color = rgba(0,255,0,0.5);
 
       resolution = 10;
 
@@ -1936,10 +1932,7 @@
             return Tree.tree01(x + xoff, y + yoff, {
               height: ht,
               width: Math.random() * 3 + 1,
-              color:
-                "rgba(100,100,100," +
-                (Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3).toFixed(3) +
-                ")",
+              color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3),
             });
           },
           function(i, j) {
@@ -2000,9 +1993,9 @@
           var tt = randChoice([0, 0, 1, 1, 1, 2]);
           if (tt == 1) {
             return Arch.arch02(x + xoff, y + yoff, seed, {
-              wid: normRand(40, 70),
+              width: normRand(40, 70),
               sto: randChoice([1, 2, 2, 3]),
-              rot: Math.random(),
+              rotation: Math.random(),
               sty: randChoice([1, 2, 3]),
             });
           } else if (tt == 2) {
@@ -2198,7 +2191,7 @@
       /*       for (var i = 0; i < ptlist.length; i++){
         canv += poly(ptlist[i],{xof:xoff,yof:yoff,str:"red",fil:"none",wid:2})
       }
- */
+      */
       canv += poly(grlist, {
         xof: xoff,
         yof: yoff,
@@ -2552,6 +2545,7 @@
       var hei = args.hei != undefined ? args.hei : 40;
       var wid = args.wid != undefined ? args.wid : 180;
       var tex = args.tex != undefined ? args.tex : 300;
+      var col = args.col != undefined ? args.col : "rgba(100,100,100,0.3)";
 
       var reso = [10, 10];
       var ptlist = [];
@@ -2577,14 +2571,14 @@
         xof: xoff,
         yof: yoff,
         fil: "none",
-        str: "rgba(100,100,100,0.3)",
+        str: col,
         wid: 2,
       });
       canv += poly(ptlist[ptlist.length - 1], {
         xof: xoff,
         yof: yoff,
         fil: "none",
-        str: "rgba(100,100,100,0.3)",
+        str: col,
         wid: 2,
       });
 
@@ -2629,6 +2623,7 @@
           : function(a) {
               return [];
             };
+      var col = args.col != undefined ? args.col : "rgba(100,100,100,0.4)";
 
       var mid = -wid * 0.5 + wid * rot;
       var bmid = -wid * 0.5 + wid * (1 - rot);
@@ -2682,7 +2677,7 @@
             return [x[0] + xoff, x[1] + yoff];
           }),
           {
-            col: "rgba(100,100,100,0.4)",
+            col: col,
             noi: 1,
             wid: wei,
             fun: function(x) {
@@ -2694,7 +2689,138 @@
       return canv;
     };
 
+    var box_ = function(xoff, yoff,
+      {
+        height = 20, width = 120, rotation = 0.7, per = 4,
+        transparent = true, bottom = true, weight = 3, dec = (a) => [],
+        color = rgba(100,100,100,0.4)
+      }
+    ) {
+      var mid = -width * 0.5 + width * rotation;
+      var bmid = -width * 0.5 + width * (1 - rotation);
+      var ptlist = [];
+      ptlist.push(div([[-width * 0.5, -height], [-width * 0.5, 0]], 5));
+      ptlist.push(div([[width * 0.5, -height], [width * 0.5, 0]], 5));
+      if (bottom) {
+        ptlist.push(div([[-width * 0.5, 0], [mid, per]], 5));
+        ptlist.push(div([[width * 0.5, 0], [mid, per]], 5));
+      }
+      ptlist.push(div([[mid, -height], [mid, per]], 5));
+      if (transparent) {
+        if (bottom) {
+          ptlist.push(div([[-width * 0.5, 0], [bmid, -per]], 5));
+          ptlist.push(div([[width * 0.5, 0], [bmid, -per]], 5));
+        }
+        ptlist.push(div([[bmid, -height], [bmid, -per]], 5));
+      }
+
+      var surf = (rotation < 0.5) * 2 - 1;
+      ptlist = ptlist.concat(
+        dec({
+          pul: [surf * width * 0.5, -height],
+          pur: [mid, -height + per],
+          pdl: [surf * width * 0.5, 0],
+          pdr: [mid, per],
+        }),
+      );
+
+      var polist = [
+        [-width * 0.5, -height],
+        [width * 0.5, -height],
+        [width * 0.5, 0],
+        [mid, per],
+        [-width * 0.5, 0],
+      ];
+
+      var canv = "";
+      if (!transparent) {
+        canv += poly(polist, {
+          xof: xoff,
+          yof: yoff,
+          str: "none",
+          fil: "white",
+        });
+      }
+
+      for (var i = 0; i < ptlist.length; i++) {
+        canv += stroke(
+          ptlist[i].map(([x, y]) => [x + xoff, y + yoff]),
+          {
+            col: color.toString(),
+            noi: 1,
+            wid: weight,
+            fun: (x) => 1
+          },
+        );
+      }
+      return canv;
+    };
+
     var deco = function(style, args) {
+      var args = args != undefined ? args : {};
+      var pul = args.pul != undefined ? args.pul : [0, 0];
+      var pur = args.pur != undefined ? args.pur : [0, 100];
+      var pdl = args.pdl != undefined ? args.pdl : [100, 0];
+      var pdr = args.pdr != undefined ? args.pdr : [100, 100];
+      var hsp = args.hsp != undefined ? args.hsp : [1, 3];
+      var vsp = args.vsp != undefined ? args.vsp : [1, 2];
+
+      var plist = [];
+      var dl = div([pul, pdl], vsp[1]);
+      var dr = div([pur, pdr], vsp[1]);
+      var du = div([pul, pur], hsp[1]);
+      var dd = div([pdl, pdr], hsp[1]);
+
+      if (style == 1) {
+        //-| |-
+        var mlu = du[hsp[0]];
+        var mru = du[du.length - 1 - hsp[0]];
+        var mld = dd[hsp[0]];
+        var mrd = dd[du.length - 1 - hsp[0]];
+
+        for (var i = vsp[0]; i < dl.length - vsp[0]; i += vsp[0]) {
+          var mml = div([mlu, mld], vsp[1])[i];
+          var mmr = div([mru, mrd], vsp[1])[i];
+          var ml = dl[i];
+          var mr = dr[i];
+          plist.push(div([mml, ml], 5));
+          plist.push(div([mmr, mr], 5));
+        }
+        plist.push(div([mlu, mld], 5));
+        plist.push(div([mru, mrd], 5));
+      } else if (style == 2) {
+        //||||
+
+        for (var i = hsp[0]; i < du.length - hsp[0]; i += hsp[0]) {
+          var mu = du[i];
+          var md = dd[i];
+          plist.push(div([mu, md], 5));
+        }
+      } else if (style == 3) {
+        //|##|
+        var mlu = du[hsp[0]];
+        var mru = du[du.length - 1 - hsp[0]];
+        var mld = dd[hsp[0]];
+        var mrd = dd[du.length - 1 - hsp[0]];
+
+        for (var i = vsp[0]; i < dl.length - vsp[0]; i += vsp[0]) {
+          var mml = div([mlu, mld], vsp[1])[i];
+          var mmr = div([mru, mrd], vsp[1])[i];
+          var mmu = div([mlu, mru], vsp[1])[i];
+          var mmd = div([mld, mrd], vsp[1])[i];
+
+          var ml = dl[i];
+          var mr = dr[i];
+          plist.push(div([mml, mmr], 5));
+          plist.push(div([mmu, mmd], 5));
+        }
+        plist.push(div([mlu, mld], 5));
+        plist.push(div([mru, mrd], 5));
+      }
+      return plist;
+    };
+
+    var deco_ = function(style, args) {
       var args = args != undefined ? args : {};
       var pul = args.pul != undefined ? args.pul : [0, 0];
       var pur = args.pur != undefined ? args.pur : [0, 100];
@@ -3066,64 +3192,43 @@
       return canv;
     };
 
-    this.arch02 = function(xoff, yoff, seed, args) {
-      var args = args != undefined ? args : {};
-      var hei = args.hei != undefined ? args.hei : 10;
-      var wid = args.wid != undefined ? args.wid : 50;
-      var rot = args.rot != undefined ? args.rot : 0.3;
-      var per = args.per != undefined ? args.per : 5;
-      var sto = args.sto != undefined ? args.sto : 3;
-      var sty = args.sty != undefined ? args.sty : 1;
-      var rai = args.rai != undefined ? args.rai : false;
+    this.arch02 = function(xoff, yoff, seed = 0,
+      {height = 10, width = 50, rotation = 0.3, per = 5, sto = 3, sty = 1, has_rails = false}
+    ) {
+      var hsps = [[], [1, 5], [1, 5], [1, 4]]
+      var vsps = [[], [1, 2], [1, 2], [1, 3]]
 
-      seed = seed != undefined ? seed : 0;
-      var canv = "";
-
-      var hoff = 0;
-      for (var i = 0; i < sto; i++) {
-        canv += box(xoff, yoff - hoff, {
-          tra: false,
-          hei: hei,
-          wid: wid * Math.pow(0.85, i),
-          rot: rot,
-          wei: 1.5,
-          per: per,
-          dec: function(a) {
-            return deco(
-              sty,
-              Object.assign({}, a, {
-                hsp: [[], [1, 5], [1, 5], [1, 4]][sty],
-                vsp: [[], [1, 2], [1, 2], [1, 3]][sty],
-              }),
-            );
-          },
-        });
-        canv += rai
-          ? rail(xoff, yoff - hoff, i * 0.2, {
-              wid: wid * Math.pow(0.85, i) * 1.1,
-              hei: hei / 2,
-              per: per,
-              rot: rot,
-              wei: 0.5,
-              tra: false,
-            })
-          : [];
-        var pla = undefined;
-        if (sto == 1 && Math.random() < 1 / 3) {
-          pla = [1, "Pizza Hut"];
-        }
-        canv += roof(xoff, yoff - hoff - hei, {
-          hei: hei,
-          wid: wid * Math.pow(0.9, i),
-          rot: rot,
-          wei: 1.5,
-          per: per,
-          pla: pla,
-        });
-
-        hoff += hei * 1.5;
-      }
-      return canv;
+      return range(sto).map( i => i * height * 1.5 ). // produce series of h_offsets
+             map( (hoff, i) => {
+               return box_(xoff, yoff - hoff, {
+                  transparent: false,
+                  height: height,
+                  width: width * Math.pow(0.85, i),
+                  rotation: rotation,
+                  weight: 1.5,
+                  per: per,
+                  color: rgba(255,0,0,0.5),
+                  dec: (a) => deco(sty, {...a, hsp: hsps[sty], vsp: vsps[sty]})
+                }) +
+                (has_rails ?
+                  rail(xoff, yoff - hoff, i * 0.2, {
+                    wid: width * Math.pow(0.85, i) * 1.1,
+                    hei: height / 2,
+                    per: per,
+                    rot: rotation,
+                    wei: 0.5,
+                    tra: false,
+                  })
+                : '') +
+                roof(xoff, yoff - hoff - height, {
+                  hei: height,
+                  wid: width * Math.pow(0.9, i),
+                  rot: rotation,
+                  wei: 1.5,
+                  per: per,
+                  pla: (sto == 1 && Math.random() < 1 / 3 ? [1, "Pizza Hut"] : undefined),
+                })
+             })
     };
     this.arch03 = function(xoff, yoff, seed, args) {
       var args = args != undefined ? args : {};
@@ -3845,7 +3950,7 @@
         tag: "?",
         x: i,
         y: 100,
-        canv: Arch.arch02(i, 500, 0, { sto: 1, rot: Math.random() }),
+        canv: Arch.arch02(i, 500, 0, { sto: 1, rotation: Math.random() }),
       });
     }
   }
