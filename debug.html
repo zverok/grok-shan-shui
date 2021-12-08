@@ -1,0 +1,231 @@
+<script type="text/javascript">
+  class RGBA {
+    constructor(r, g, b, a) {
+      this.r = r
+      this.g = g
+      this.b = b
+      this.a = a
+    }
+
+    toString() {
+      return `rgba(${this.r.toFixed()},${this.g.toFixed()},${this.b.toFixed()},${this.a.toFixed(1)})`
+    }
+
+    merge({r, g, b, a}) {
+      return new RGBA(r || this.r, g || this.g, b || this.b, a || this.a)
+    }
+  }
+
+  function rgba(r, g, b, a) { return new RGBA(r, g, b, a) }
+
+  function range(n) {
+    return Array.from({length: Math.ceil(n)}, (_, i) => i);
+  }
+
+  Object.prototype.and_then = function(f) { return f(this) }
+  Object.prototype.tap = function(f) { f(this); return this }
+
+  Array.prototype.last = function() { return this[this.length - 1] }
+
+  function div(points, resolution) {
+    return range((points.length - 1) * resolution).map( i => {
+      var [prev_x, prev_y] = points[Math.floor(i / resolution)];
+      var [next_x, next_y] = points[Math.ceil(i / resolution)];
+      var p = (i % resolution) / resolution;
+
+      return [
+        prev_x * (1 - p) + next_x * p,
+        prev_y * (1 - p) + next_y * p
+      ]
+    }).concat([points.last()])
+  }
+
+  function poly(plist, args) {
+    var args = args != undefined ? args : {};
+    var xof = args.xof != undefined ? args.xof : 0;
+    var yof = args.yof != undefined ? args.yof : 0;
+    var fil = args.fil != undefined ? args.fil : "rgba(0,0,0,0)";
+    var str = args.str != undefined ? args.str : fil;
+    var wid = args.wid != undefined ? args.wid : 0;
+
+    var canv = "<polyline points='";
+    for (var i = 0; i < plist.length; i++) {
+      canv +=
+        " " +
+        (plist[i][0] + xof).toFixed(1) +
+        "," +
+        (plist[i][1] + yof).toFixed(1);
+    }
+    canv +=
+      "' style='fill:" +
+      fil +
+      ";stroke:" +
+      str +
+      ";stroke-width:" +
+      wid +
+      "'/>";
+    return canv;
+  }
+
+  function poly_(points, {x_offset = 0, y_offset = 0, fill = rgba(0, 0, 0, 0), stroke, width = 0}) {
+    stroke ||= fill
+
+    return "<polyline points='" +
+      points.map( ([x, y]) => `${(x + x_offset).toFixed(1)},${(y + y_offset).toFixed(1)}` ).join(' ') +
+      `' style='fill: ${fill};stroke: ${stroke};stroke-width: ${width}'/>`
+  }
+
+  function stroke(ptlist, args) {
+    var args = args != undefined ? args : {};
+    var xof = args.xof != undefined ? args.xof : 0;
+    var yof = args.yof != undefined ? args.yof : 0;
+    var wid = args.wid != undefined ? args.wid : 2;
+    var col = args.col != undefined ? args.col : "rgba(200,200,200,0.9)";
+    var noi = args.noi != undefined ? args.noi : 0.5;
+    var out = args.out != undefined ? args.out : 1;
+    var fun =
+      args.fun != undefined
+        ? args.fun
+        : function(x) {
+            return Math.sin(x * Math.PI);
+          };
+
+    if (ptlist.length == 0) {
+      return "";
+    }
+    vtxlist0 = [];
+    vtxlist1 = [];
+    vtxlist = [];
+    var n0 = Math.random() * 10;
+    for (var i = 1; i < ptlist.length - 1; i++) {
+      var w = wid * fun(i / ptlist.length);
+      w = w * (1 - noi) + w * noi; // * Noise.noise(i * 0.5, n0);
+      var a1 = Math.atan2(
+        ptlist[i][1] - ptlist[i - 1][1],
+        ptlist[i][0] - ptlist[i - 1][0],
+      );
+      var a2 = Math.atan2(
+        ptlist[i][1] - ptlist[i + 1][1],
+        ptlist[i][0] - ptlist[i + 1][0],
+      );
+      var a = (a1 + a2) / 2;
+      if (a < a2) {
+        a += Math.PI;
+      }
+      vtxlist0.push([
+        ptlist[i][0] + w * Math.cos(a),
+        ptlist[i][1] + w * Math.sin(a),
+      ]);
+      vtxlist1.push([
+        ptlist[i][0] - w * Math.cos(a),
+        ptlist[i][1] - w * Math.sin(a),
+      ]);
+    }
+
+    vtxlist = [ptlist[0]]
+      .concat(
+        vtxlist0.concat(vtxlist1.concat([ptlist[ptlist.length - 1]]).reverse()),
+      )
+      .concat([ptlist[0]]);
+
+    var canv = poly(
+      vtxlist.map(function(x) {
+        return [x[0] + xof, x[1] + yof];
+      }),
+      { fil: col, str: col, wid: out },
+    );
+    return canv;
+  }
+
+    var box_ = function(x_offset, y_offset,
+      {
+        height = 20, width = 120, rotation = 0.7, perspective = 4,
+        transparent = true, bottom = true, weight = 3, dec = (a) => [],
+        color = rgba(100,100,100,0.4)
+      }
+    ) {
+      var out = document.getElementById('box').getElementsByTagName('pre')[0]
+      var p = (o) => { out.innerHTML += "\n" + JSON.stringify(o) }
+
+      var mid = -width * 0.5 + width * rotation;
+      var bmid = -width * 0.5 + width * (1 - rotation);
+      var ptlist = [];
+      ptlist.push(div([[-width * 0.5, -height], [-width * 0.5, 0]], 5));
+      p({
+        points: [[-width * 0.5, -height], [-width * 0.5, 0]],
+        div: div([[-width * 0.5, -height], [-width * 0.5, 0]], 5)
+      })
+
+      ptlist.push(div([[width * 0.5, -height], [width * 0.5, 0]], 5));
+      if (bottom) {
+        ptlist.push(div([[-width * 0.5, 0], [mid, perspective]], 5));
+        ptlist.push(div([[width * 0.5, 0], [mid, perspective]], 5));
+      }
+      ptlist.push(div([[mid, -height], [mid, perspective]], 5));
+      if (transparent) {
+        if (bottom) {
+          ptlist.push(div([[-width * 0.5, 0], [bmid, -perspective]], 5));
+          ptlist.push(div([[width * 0.5, 0], [bmid, -perspective]], 5));
+        }
+        ptlist.push(div([[bmid, -height], [bmid, -perspective]], 5));
+      }
+
+      var surf = (rotation < 0.5) * 2 - 1;
+      ptlist = ptlist.concat(
+        dec({
+          pul: [surf * width * 0.5, -height],
+          pur: [mid, -height + perspective],
+          pdl: [surf * width * 0.5, 0],
+          pdr: [mid, perspective],
+        }),
+      );
+
+      var canv = "";
+      if (!transparent) {
+        var corners = [
+          [-width/2, -height], // top-left
+          [width/2, -height],  // top-right
+          [width/2, 0],        // bottom-right
+          [mid, perspective],  // front corner
+          [-width/2, 0],       // bottom-left
+        ];
+
+        canv += poly_(corners, {x_offset, y_offset, stroke: "none", fill: "white"});
+      }
+
+      for (var i = 0; i < ptlist.length; i++) {
+        canv += stroke(
+          ptlist[i].map(([x, y]) => [x + x_offset, y + y_offset]),
+          {
+            col: color.toString(),
+            noi: 1,
+            wid: weight,
+            fun: (x) => 1
+          },
+        );
+      }
+      return canv;
+    };
+
+</script>
+
+<body style="margin:0">
+  <table>
+    <tr>
+      <th>Picture</th>
+      <th>Debug info</th>
+    </tr>
+    <tr id="box">
+      <td class="pic"></td>
+      <td class="debug"><pre style="max-width: 800; overflow-x: scroll;font-size: small;"></pre></td>
+    </tr>
+  </table>
+</body>
+
+<script>
+  console.log(document.getElementById("box"))
+    document.getElementById("box").getElementsByClassName('pic')[0].innerHTML =
+      "<svg id='SVG' xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g id='G'>" +
+        box_(100, 100, {height: 60, rotation: 0.3, weight: 1, perspective: 20}) +
+        "</g></svg>";
+</script>
