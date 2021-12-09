@@ -26,6 +26,13 @@
   Object.prototype.tap = function(f) { f(this); return this }
 
   Array.prototype.last = function() { return this[this.length - 1] }
+  Array.prototype.zip = function(...others) {
+    return this.map((el, i) => [el, ...others.map(o => o[i])]);
+  }
+  Array.prototype.eachCons = function(size) {
+    var others = range(size).map(i => this.slice(i)).slice(1)
+    return this.slice(null, this.length - size + 1).zip(...others)
+  }
 
   function div(points, resolution) {
     return range((points.length - 1) * resolution).map( i => {
@@ -38,6 +45,14 @@
         prev_y * (1 - p) + next_y * p
       ]
     }).concat([points.last()])
+  }
+
+  function extrapolate(points, {num_of_midpoints}) {
+    return points.eachCons(2).flatMap( ([[x1, y1], [x2, y2]]) =>
+      range(num_of_midpoints).map(
+        i => [x1 + (x2 - x1) / num_of_midpoints * i, y1 + (y2 - y1) / num_of_midpoints * i]
+      )
+    ).concat([points.last()])
   }
 
   function poly(plist, args) {
@@ -140,70 +155,84 @@
     var box_ = function(x_offset, y_offset,
       {
         height = 20, width = 120, rotation = 0.7, perspective = 4,
-        transparent = true, bottom = true, weight = 3, dec = (a) => [],
+        transparent = true, has_floor = true, weight = 3, dec = (a) => [],
         color = rgba(100,100,100,0.4)
       }
     ) {
       var out = document.getElementById('box').getElementsByTagName('pre')[0]
       var p = (o) => { out.innerHTML += "\n" + JSON.stringify(o) }
 
-      var mid = -width * 0.5 + width * rotation;
-      var bmid = -width * 0.5 + width * (1 - rotation);
-      var ptlist = [];
-      ptlist.push(div([[-width * 0.5, -height], [-width * 0.5, 0]], 5));
-      p({
-        points: [[-width * 0.5, -height], [-width * 0.5, 0]],
-        div: div([[-width * 0.5, -height], [-width * 0.5, 0]], 5)
-      })
+      var left = -width/2
+      var right = +width/2
+      var top = -height
+      var bottom = 0
 
-      ptlist.push(div([[width * 0.5, -height], [width * 0.5, 0]], 5));
-      if (bottom) {
-        ptlist.push(div([[-width * 0.5, 0], [mid, perspective]], 5));
-        ptlist.push(div([[width * 0.5, 0], [mid, perspective]], 5));
-      }
-      ptlist.push(div([[mid, -height], [mid, perspective]], 5));
-      if (transparent) {
-        if (bottom) {
-          ptlist.push(div([[-width * 0.5, 0], [bmid, -perspective]], 5));
-          ptlist.push(div([[width * 0.5, 0], [bmid, -perspective]], 5));
+      var front_x = left + width * rotation;
+      var front_y = perspective
+
+      var back_x = left + width * (1 - rotation);
+      var back_y = -perspective
+
+      // First, side of the house
+      var lines = [
+        [ [left , top], [left , bottom] ],
+        [ [right, top], [right, bottom] ]
+      ]
+      // background post
+      if (transparent) { lines.push([ [back_x, top], [back_x, back_y] ]) }
+
+      if (has_floor) {
+        lines = lines.concat([
+          [ [left , bottom], [front_x, front_y] ],
+          [ [right, bottom], [front_x, front_y] ]
+        ])
+        if(transparent) { // two background lines of the floor
+          lines = lines.concat([
+            [[left , bottom], [back_x, back_y] ],
+            [[right, bottom], [back_x, back_y] ]
+          ])
         }
-        ptlist.push(div([[bmid, -height], [bmid, -perspective]], 5));
       }
+      // foreground post, should come last
+      lines.push([[front_x, top], [front_x, front_y]])
+
+      lines = lines.map( points => extrapolate(points, {num_of_midpoints: 5}) )
 
       var surf = (rotation < 0.5) * 2 - 1;
-      ptlist = ptlist.concat(
+      lines = lines.concat(
         dec({
-          pul: [surf * width * 0.5, -height],
-          pur: [mid, -height + perspective],
-          pdl: [surf * width * 0.5, 0],
-          pdr: [mid, perspective],
+          pul: [surf * right, top],
+          pur: [front_x, top + perspective],
+          pdl: [surf * right, bottom],
+          pdr: [front_x, front_y],
         }),
       );
 
       var canv = "";
       if (!transparent) {
-        var corners = [
-          [-width/2, -height], // top-left
-          [width/2, -height],  // top-right
-          [width/2, 0],        // bottom-right
-          [mid, perspective],  // front corner
-          [-width/2, 0],       // bottom-left
-        ];
-
-        canv += poly_(corners, {x_offset, y_offset, stroke: "none", fill: "white"});
+        canv += poly_(
+          [
+            [left   , top    ],
+            [right  , top    ],
+            [right  , bottom ],
+            [front_x, front_y],
+            [left   , bottom ],
+          ],
+          {x_offset, y_offset, stroke: "none", fill: "white"}
+        );
       }
 
-      for (var i = 0; i < ptlist.length; i++) {
-        canv += stroke(
-          ptlist[i].map(([x, y]) => [x + x_offset, y + y_offset]),
+      canv += lines.map( line =>
+        stroke(
+          line.map(([x, y]) => [x + x_offset, y + y_offset]),
           {
             col: color.toString(),
             noi: 1,
             wid: weight,
             fun: (x) => 1
           },
-        );
-      }
+        )
+      ).join()
       return canv;
     };
 
