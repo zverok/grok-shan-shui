@@ -1,3 +1,182 @@
+<script id="PRNG">
+  var Prng = new function() {
+    this.s = 1234;
+    this.p = 999979; //9887//983
+    this.q = 999983; //9967//991
+    this.m = this.p * this.q;
+    this.hash = function(x) {
+      var y = window.btoa(JSON.stringify(x));
+      var z = 0;
+      for (var i = 0; i < y.length; i++) {
+        z += y.charCodeAt(i) * Math.pow(128, i);
+      }
+      return z;
+    };
+    this.seed = function(x) {
+      if (x == undefined) {
+        x = new Date().getTime();
+      }
+      var y = 0;
+      var z = 0;
+      function redo() {
+        y = (Prng.hash(x) + z) % Prng.m;
+        z += 1;
+      }
+      while (y % Prng.p == 0 || y % Prng.q == 0 || y == 0 || y == 1) {
+        redo();
+      }
+      Prng.s = y;
+      console.log(["int seed", Prng.s]);
+      for (var i = 0; i < 10; i++) {
+        Prng.next();
+      }
+    };
+    this.next = function() {
+      Prng.s = (Prng.s * Prng.s) % Prng.m;
+      return Prng.s / Prng.m;
+    };
+    this.test = function(f) {
+      var F =
+        f ||
+        function() {
+          return Prng.next();
+        };
+      var t0 = new Date().getTime();
+      var chart = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      for (var i = 0; i < 10000000; i++) {
+        chart[Math.floor(F() * 10)] += 1;
+      }
+      console.log(chart);
+      console.log("finished in " + (new Date().getTime() - t0));
+      return chart;
+    };
+  }();
+  Math.random = function() {
+    return Prng.next();
+  };
+  Math.seed = function(x) {
+    return Prng.seed(x);
+  };
+</script>
+
+<script id="PerlinNoise">
+  //https://raw.githubusercontent.com/processing/p5.js/master/src/math/noise.js
+  var Noise = new function() {
+    var PERLIN_YWRAPB = 4;
+    var PERLIN_YWRAP = 1 << PERLIN_YWRAPB;
+    var PERLIN_ZWRAPB = 8;
+    var PERLIN_ZWRAP = 1 << PERLIN_ZWRAPB;
+    var PERLIN_SIZE = 4095;
+    var perlin_octaves = 4;
+    var perlin_amp_falloff = 0.5;
+    var scaled_cosine = function(i) {
+      return 0.5 * (1.0 - Math.cos(i * Math.PI));
+    };
+    var perlin;
+    this.noise = function(x, y, z) {
+      y = y || 0;
+      z = z || 0;
+      if (perlin == null) {
+        perlin = new Array(PERLIN_SIZE + 1);
+        for (var i = 0; i < PERLIN_SIZE + 1; i++) {
+          perlin[i] = Math.random();
+        }
+      }
+      if (x < 0) {
+        x = -x;
+      }
+      if (y < 0) {
+        y = -y;
+      }
+      if (z < 0) {
+        z = -z;
+      }
+      var xi = Math.floor(x),
+        yi = Math.floor(y),
+        zi = Math.floor(z);
+      var xf = x - xi;
+      var yf = y - yi;
+      var zf = z - zi;
+      var rxf, ryf;
+      var r = 0;
+      var ampl = 0.5;
+      var n1, n2, n3;
+      for (var o = 0; o < perlin_octaves; o++) {
+        var of = xi + (yi << PERLIN_YWRAPB) + (zi << PERLIN_ZWRAPB);
+        rxf = scaled_cosine(xf);
+        ryf = scaled_cosine(yf);
+        n1 = perlin[of & PERLIN_SIZE];
+        n1 += rxf * (perlin[(of + 1) & PERLIN_SIZE] - n1);
+        n2 = perlin[(of + PERLIN_YWRAP) & PERLIN_SIZE];
+        n2 += rxf * (perlin[(of + PERLIN_YWRAP + 1) & PERLIN_SIZE] - n2);
+        n1 += ryf * (n2 - n1);
+        of += PERLIN_ZWRAP;
+        n2 = perlin[of & PERLIN_SIZE];
+        n2 += rxf * (perlin[(of + 1) & PERLIN_SIZE] - n2);
+        n3 = perlin[(of + PERLIN_YWRAP) & PERLIN_SIZE];
+        n3 += rxf * (perlin[(of + PERLIN_YWRAP + 1) & PERLIN_SIZE] - n3);
+        n2 += ryf * (n3 - n2);
+        n1 += scaled_cosine(zf) * (n2 - n1);
+        r += n1 * ampl;
+        ampl *= perlin_amp_falloff;
+        xi <<= 1;
+        xf *= 2;
+        yi <<= 1;
+        yf *= 2;
+        zi <<= 1;
+        zf *= 2;
+        if (xf >= 1.0) {
+          xi++;
+          xf--;
+        }
+        if (yf >= 1.0) {
+          yi++;
+          yf--;
+        }
+        if (zf >= 1.0) {
+          zi++;
+          zf--;
+        }
+      }
+      return r;
+    };
+    this.noiseDetail = function(lod, falloff) {
+      if (lod > 0) {
+        perlin_octaves = lod;
+      }
+      if (falloff > 0) {
+        perlin_amp_falloff = falloff;
+      }
+    };
+    this.noiseSeed = function(seed) {
+      var lcg = (function() {
+        var m = 4294967296,
+          a = 1664525,
+          c = 1013904223,
+          seed,
+          z;
+        return {
+          setSeed: function(val) {
+            z = seed = (val == null ? Math.random() * m : val) >>> 0;
+          },
+          getSeed: function() {
+            return seed;
+          },
+          rand: function() {
+            z = (a * z + c) % m;
+            return z / m;
+          },
+        };
+      })();
+      lcg.setSeed(seed);
+      perlin = new Array(PERLIN_SIZE + 1);
+      for (var i = 0; i < PERLIN_SIZE + 1; i++) {
+        perlin[i] = lcg.rand();
+      }
+    };
+  }();
+</script>
+
 <script type="text/javascript">
   class RGBA {
     constructor(r, g, b, a) {
@@ -114,7 +293,7 @@
     var n0 = Math.random() * 10;
     for (var i = 1; i < ptlist.length - 1; i++) {
       var w = wid * fun(i / ptlist.length);
-      w = w * (1 - noi) + w * noi; // * Noise.noise(i * 0.5, n0);
+      w = w * (1 - noi) + w * noi * Noise.noise(i * 0.5, n0);
       var a1 = Math.atan2(
         ptlist[i][1] - ptlist[i - 1][1],
         ptlist[i][0] - ptlist[i - 1][0],
@@ -152,10 +331,176 @@
     return canv;
   }
 
+  function stroke_(points,
+    {x_offset = 0, y_offset = 0, width = 2, color = rgba(200,200,200,0.9), noise = 0.5, outline = 1,
+      shaper = (x) => Math.sin(x * Math.PI)}
+  ) {
+
+    if (points.length == 0) return "";
+
+    var n0 = Math.random() * 10;
+    var transitions = points.eachCons(3).map( ([[x_prev, y_prev], [x, y], [x_post, y_post]], idx) => {
+      i = idx + 1
+      var distance = width * shaper(i / points.length);
+      distance = distance * (1 - noise) + distance * noise * Noise.noise(i * 0.5, n0);
+
+      var angle_before = Math.atan2(y - y_prev, x - x_prev)
+      var angle_after = Math.atan2(y - y_post, x - x_post)
+      var angle = (angle_before + angle_after) / 2;
+      if (angle < angle_after) angle += Math.PI;
+
+      return [distance, angle]
+    })
+
+    var vertexes_top = transitions.zip(points.slice(1)).map(
+      ([[distance, angle], [x, y]]) => [x + distance * Math.cos(angle), y + distance * Math.sin(angle)]
+    )
+
+    var vertexes_bottom = transitions.zip(points.slice(1)).map(
+      ([[distance, angle], [x, y]]) => [x - distance * Math.cos(angle), y - distance * Math.sin(angle)]
+    )
+
+    return [
+      points[0],
+      ...vertexes_top,
+      points.last(),
+      ...vertexes_bottom.reverse(),
+      points[0]
+    ].
+      map(([x, y]) => [x + x_offset, y + y_offset]).
+      and_then( vertexes => poly_(vertexes, {fill: color, stroke: color, width: outline}))
+  }
+
+    var deco = function(style, args) {
+      var args = args != undefined ? args : {};
+      var pul = args.pul != undefined ? args.pul : [0, 0];
+      var pur = args.pur != undefined ? args.pur : [0, 100];
+      var pdl = args.pdl != undefined ? args.pdl : [100, 0];
+      var pdr = args.pdr != undefined ? args.pdr : [100, 100];
+      var hsp = args.hsp != undefined ? args.hsp : [1, 3];
+      var vsp = args.vsp != undefined ? args.vsp : [1, 2];
+
+      var plist = [];
+      var dl = div([pul, pdl], vsp[1]);
+      var dr = div([pur, pdr], vsp[1]);
+      var du = div([pul, pur], hsp[1]);
+      var dd = div([pdl, pdr], hsp[1]);
+
+      if (style == 1) {
+        //-| |-
+        var mlu = du[hsp[0]];
+        var mru = du[du.length - 1 - hsp[0]];
+        var mld = dd[hsp[0]];
+        var mrd = dd[du.length - 1 - hsp[0]];
+
+        for (var i = vsp[0]; i < dl.length - vsp[0]; i += vsp[0]) {
+          var mml = div([mlu, mld], vsp[1])[i];
+          var mmr = div([mru, mrd], vsp[1])[i];
+          var ml = dl[i];
+          var mr = dr[i];
+          plist.push(div([mml, ml], 5));
+          plist.push(div([mmr, mr], 5));
+        }
+        plist.push(div([mlu, mld], 5));
+        plist.push(div([mru, mrd], 5));
+      } else if (style == 2) {
+        //||||
+
+        for (var i = hsp[0]; i < du.length - hsp[0]; i += hsp[0]) {
+          var mu = du[i];
+          var md = dd[i];
+          plist.push(div([mu, md], 5));
+        }
+      } else if (style == 3) {
+        //|##|
+        var mlu = du[hsp[0]];
+        var mru = du[du.length - 1 - hsp[0]];
+        var mld = dd[hsp[0]];
+        var mrd = dd[du.length - 1 - hsp[0]];
+
+        for (var i = vsp[0]; i < dl.length - vsp[0]; i += vsp[0]) {
+          var mml = div([mlu, mld], vsp[1])[i];
+          var mmr = div([mru, mrd], vsp[1])[i];
+          var mmu = div([mlu, mru], vsp[1])[i];
+          var mmd = div([mld, mrd], vsp[1])[i];
+
+          var ml = dl[i];
+          var mr = dr[i];
+          plist.push(div([mml, mmr], 5));
+          plist.push(div([mmu, mmd], 5));
+        }
+        plist.push(div([mlu, mld], 5));
+        plist.push(div([mru, mrd], 5));
+      }
+      return plist;
+    };
+
+    var decorator = function(style,
+      {
+        up_left = [0, 0], up_right = [0, 100], down_left=[100, 0], down_right=[100, 100],
+        horz_spacing = {padding: 1, count: 3}, vert_spacing = {padding: 1, count: 2}
+      }
+    ) {
+      var plist = [];
+      var dl = div([up_left, down_left], vert_spacing.count);
+      var dr = div([up_right, down_right], vert_spacing.count);
+      var du = div([up_left, up_right], horz_spacing.count);
+      var dd = div([down_left, down_right], horz_spacing.count);
+
+      if (style == 't_shapes') {
+        //-| |-
+        var mlu = du[horz_spacing.padding];
+        var mru = du[du.length - 1 - horz_spacing.padding];
+        var mld = dd[horz_spacing.padding];
+        var mrd = dd[du.length - 1 - horz_spacing.padding];
+
+        for (var i = vert_spacing.padding; i < dl.length - vert_spacing.padding; i += vert_spacing.padding) {
+          var mml = div([mlu, mld], vert_spacing.count)[i];
+          var mmr = div([mru, mrd], vert_spacing.count)[i];
+          var ml = dl[i];
+          var mr = dr[i];
+          plist.push(div([mml, ml], 5));
+          plist.push(div([mmr, mr], 5));
+        }
+        plist.push(div([mlu, mld], 5));
+        plist.push(div([mru, mrd], 5));
+      } else if (style == 'fence') {
+        //||||
+
+        for (var i = horz_spacing.padding; i < du.length - horz_spacing.padding; i += horz_spacing.padding) {
+          var mu = du[i];
+          var md = dd[i];
+          plist.push(div([mu, md], 5));
+        }
+      } else if (style == 'grid') {
+        //|##|
+        var mlu = du[horz_spacing.padding];
+        var mru = du[du.length - 1 - horz_spacing.padding];
+        var mld = dd[horz_spacing.padding];
+        var mrd = dd[du.length - 1 - horz_spacing.padding];
+
+        for (var i = vert_spacing.padding; i < dl.length - vert_spacing.padding; i += vert_spacing.padding) {
+          var mml = div([mlu, mld], vert_spacing.count)[i];
+          var mmr = div([mru, mrd], vert_spacing.count)[i];
+          var mmu = div([mlu, mru], vert_spacing.count)[i];
+          var mmd = div([mld, mrd], vert_spacing.count)[i];
+
+          var ml = dl[i];
+          var mr = dr[i];
+          plist.push(div([mml, mmr], 5));
+          plist.push(div([mmu, mmd], 5));
+        }
+        plist.push(div([mlu, mld], 5));
+        plist.push(div([mru, mrd], 5));
+      }
+      return plist;
+    };
+
+
     var box_ = function(x_offset, y_offset,
       {
         height = 20, width = 120, rotation = 0.7, perspective = 4,
-        transparent = true, has_floor = true, weight = 3, dec = (a) => [],
+        transparent = true, has_floor = true, weight = 3, decoration = (a) => [],
         color = rgba(100,100,100,0.4)
       }
     ) {
@@ -198,13 +543,13 @@
 
       lines = lines.map( points => extrapolate(points, {num_of_midpoints: 5}) )
 
-      var surf = (rotation < 0.5) * 2 - 1;
+      var side = (rotation < 0.5) ? right : left;
       lines = lines.concat(
-        dec({
-          pul: [surf * right, top],
-          pur: [front_x, top + perspective],
-          pdl: [surf * right, bottom],
-          pdr: [front_x, front_y],
+        decoration({
+          up_left:    [side   , top],
+          up_right:   [front_x, top + perspective],
+          down_left:  [side   , bottom],
+          down_right: [front_x, front_y],
         }),
       );
 
@@ -223,13 +568,15 @@
       }
 
       canv += lines.map( line =>
-        stroke(
-          line.map(([x, y]) => [x + x_offset, y + y_offset]),
+        stroke_(
+          line,
           {
-            col: color.toString(),
-            noi: 1,
-            wid: weight,
-            fun: (x) => 1
+            x_offset,
+            y_offset,
+            color,
+            noise: 1,
+            width: weight,
+            shaper: (x) => 1
           },
         )
       ).join()
@@ -252,9 +599,32 @@
 </body>
 
 <script>
-  console.log(document.getElementById("box"))
+    Math.seed(10000)
+    var horz_spacings = {
+      t_shapes: {padding: 1, count: 5},
+      fence: {padding: 1, count: 5},
+      grid: {padding: 1, count: 4}
+    }
+    var vert_spacings = {
+      t_shapes: {padding: 1, count: 2},
+      fence: {padding: 1, count: 2},
+      grid: {padding: 1, count: 3}
+    }
+
+    var style = 'grid'
+
+    var box = box_(100, 100,
+      {
+        height: 60,
+        rotation: 0.3,
+        weight: 3,
+        perspective: 20,
+        transparent: false,
+        decoration: (a) =>
+          decorator(style, {...a, horz_spacing: horz_spacings[style], vert_spacing: vert_spacings[style]})
+      })
+
     document.getElementById("box").getElementsByClassName('pic')[0].innerHTML =
       "<svg id='SVG' xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g id='G'>" +
-        box_(100, 100, {height: 60, rotation: 0.3, weight: 1, perspective: 20}) +
-        "</g></svg>";
+        box + "</g></svg>";
 </script>
