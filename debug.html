@@ -177,6 +177,185 @@
   }();
 </script>
 
+<script id="PolyTools">
+  var PolyTools = new function() {
+    this.midPt = function() {
+      var plist =
+        arguments.length == 1 ? arguments[0] : Array.apply(null, arguments);
+      return plist.reduce(
+        function(acc, v) {
+          /*       if (v == undefined || acc == undefined){
+        console.log("ERRR");
+        console.log(plist)
+        return [0,0]
+      } */
+          return [v[0] / plist.length + acc[0], v[1] / plist.length + acc[1]];
+        },
+        [0, 0],
+      );
+    };
+    this.triangulate = function(plist, args) {
+      //return []
+      var args = args != undefined ? args : {};
+      var area = args.area != undefined ? args.area : 100;
+      var convex = args.convex != undefined ? args.convex : false;
+      var optimize = args.optimize != undefined ? args.optimize : true;
+      function lineExpr(pt0, pt1) {
+        var den = pt1[0] - pt0[0];
+        var m = den == 0 ? Infinity : (pt1[1] - pt0[1]) / den;
+        var k = pt0[1] - m * pt0[0];
+        return [m, k];
+      }
+      function intersect(ln0, ln1) {
+        var le0 = lineExpr(...ln0);
+        var le1 = lineExpr(...ln1);
+        var den = le0[0] - le1[0];
+        if (den == 0) {
+          return false;
+        }
+        var x = (le1[1] - le0[1]) / den;
+        var y = le0[0] * x + le0[1];
+        function onSeg(p, ln) {
+          //non-inclusive
+          return (
+            Math.min(ln[0][0], ln[1][0]) <= p[0] &&
+            p[0] <= Math.max(ln[0][0], ln[1][0]) &&
+            Math.min(ln[0][1], ln[1][1]) <= p[1] &&
+            p[1] <= Math.max(ln[0][1], ln[1][1])
+          );
+        }
+        if (onSeg([x, y], ln0) && onSeg([x, y], ln1)) {
+          return [x, y];
+        }
+        return false;
+      }
+      function ptInPoly(pt, plist) {
+        var scount = 0;
+        for (var i = 0; i < plist.length; i++) {
+          var np = plist[i != plist.length - 1 ? i + 1 : 0];
+          var sect = intersect(
+            [plist[i], np],
+            [pt, [pt[0] + 999, pt[1] + 999]],
+          );
+          if (sect != false) {
+            scount++;
+          }
+        }
+        return scount % 2 == 1;
+      }
+      function lnInPoly(ln, plist) {
+        var lnc = [[0, 0], [0, 0]];
+        var ep = 0.01;
+
+        lnc[0][0] = ln[0][0] * (1 - ep) + ln[1][0] * ep;
+        lnc[0][1] = ln[0][1] * (1 - ep) + ln[1][1] * ep;
+        lnc[1][0] = ln[0][0] * ep + ln[1][0] * (1 - ep);
+        lnc[1][1] = ln[0][1] * ep + ln[1][1] * (1 - ep);
+
+        for (var i = 0; i < plist.length; i++) {
+          var pt = plist[i];
+          var np = plist[i != plist.length - 1 ? i + 1 : 0];
+          if (intersect(lnc, [pt, np]) != false) {
+            return false;
+          }
+        }
+        var mid = PolyTools.midPt(ln);
+        if (ptInPoly(mid, plist) == false) {
+          return false;
+        }
+        return true;
+      }
+
+      function sidesOf(plist) {
+        var slist = [];
+        for (var i = 0; i < plist.length; i++) {
+          var pt = plist[i];
+          var np = plist[i != plist.length - 1 ? i + 1 : 0];
+          var s = Math.sqrt(
+            Math.pow(np[0] - pt[0], 2) + Math.pow(np[1] - pt[1], 2),
+          );
+          slist.push(s);
+        }
+        return slist;
+      }
+      function areaOf(plist) {
+        var slist = sidesOf(plist);
+        var a = slist[0],
+          b = slist[1],
+          c = slist[2];
+        var s = (a + b + c) / 2;
+        return Math.sqrt(s * (s - a) * (s - b) * (s - c));
+      }
+      function sliverRatio(plist) {
+        var A = areaOf(plist);
+        var P = sidesOf(plist).reduce(function(m, n) {
+          return m + n;
+        }, 0);
+        return A / P;
+      }
+      function bestEar(plist) {
+        var cuts = [];
+        for (var i = 0; i < plist.length; i++) {
+          var pt = plist[i];
+          var lp = plist[i != 0 ? i - 1 : plist.length - 1];
+          var np = plist[i != plist.length - 1 ? i + 1 : 0];
+          var qlist = plist.slice();
+          qlist.splice(i, 1);
+          if (convex || lnInPoly([lp, np], plist)) {
+            var c = [[lp, pt, np], qlist];
+            if (!optimize) return c;
+            cuts.push(c);
+          }
+        }
+        var best = [plist, []];
+        var bestRatio = 0;
+        for (var i = 0; i < cuts.length; i++) {
+          var r = sliverRatio(cuts[i][0]);
+          if (r >= bestRatio) {
+            best = cuts[i];
+            bestRatio = r;
+          }
+        }
+        return best;
+      }
+      function shatter(plist, a) {
+        if (plist.length == 0) {
+          return [];
+        }
+        if (areaOf(plist) < a) {
+          return [plist];
+        } else {
+          var slist = sidesOf(plist);
+          var ind = slist.reduce(
+            (iMax, x, i, arr) => (x > arr[iMax] ? i : iMax),
+            0,
+          );
+          var nind = (ind + 1) % plist.length;
+          var lind = (ind + 2) % plist.length;
+          try {
+            var mid = PolyTools.midPt([plist[ind], plist[nind]]);
+          } catch (err) {
+            console.log(plist);
+            console.log(err);
+            return [];
+          }
+          return shatter([plist[ind], mid, plist[lind]], a).concat(
+            shatter([plist[lind], plist[nind], mid], a),
+          );
+        }
+      }
+      if (plist.length <= 3) {
+        return shatter(plist, area);
+      } else {
+        var cut = bestEar(plist);
+        return shatter(cut[0], area).concat(
+          PolyTools.triangulate(cut[1], args),
+        );
+      }
+    };
+  }();
+</script>
+
 <script type="text/javascript">
   class RGBA {
     constructor(r, g, b, a) {
@@ -583,6 +762,277 @@
       return canv;
     };
 
+    var flip = function(ptlist, axis) {
+      axis = axis == undefined ? 0 : axis;
+      for (var i = 0; i < ptlist.length; i++) {
+        if (ptlist[i].length > 0) {
+          if (typeof ptlist[i][0] == "object") {
+            for (var j = 0; j < ptlist[i].length; j++) {
+              ptlist[i][j][0] = axis - (ptlist[i][j][0] - axis);
+            }
+          } else {
+            ptlist[i][0] = axis - (ptlist[i][0] - axis);
+          }
+        }
+      }
+      return ptlist;
+    };
+
+    var rail = function(xoff, yoff, seed, args) {
+      var args = args != undefined ? args : {};
+      var hei = args.hei != undefined ? args.hei : 20;
+      var wid = args.wid != undefined ? args.wid : 180;
+      var rot = args.rot != undefined ? args.rot : 0.7;
+      var per = args.per != undefined ? args.per : 4;
+      var seg = args.seg != undefined ? args.seg : 4;
+      var wei = args.wei != undefined ? args.wei : 1;
+      var tra = args.tra != undefined ? args.tra : true;
+      var fro = args.fro != undefined ? args.fro : true;
+
+      seed = seed != undefined ? seed : 0;
+
+      var mid = -wid * 0.5 + wid * rot;
+      var bmid = -wid * 0.5 + wid * (1 - rot);
+      var ptlist = [];
+
+      if (fro) {
+        ptlist.push(div([[-wid * 0.5, 0], [mid, per]], seg));
+        ptlist.push(div([[mid, per], [wid * 0.5, 0]], seg));
+      }
+      if (tra) {
+        ptlist.push(div([[-wid * 0.5, 0], [bmid, -per]], seg));
+        ptlist.push(div([[bmid, -per], [wid * 0.5, 0]], seg));
+      }
+      if (fro) {
+        ptlist.push(div([[-wid * 0.5, -hei], [mid, -hei + per]], seg));
+        ptlist.push(div([[mid, -hei + per], [wid * 0.5, -hei]], seg));
+      }
+      if (tra) {
+        ptlist.push(div([[-wid * 0.5, -hei], [bmid, -hei - per]], seg));
+        ptlist.push(div([[bmid, -hei - per], [wid * 0.5, -hei]], seg));
+      }
+      if (tra) {
+        var open = Math.floor(Math.random() * ptlist.length);
+        ptlist[open] = ptlist[open].slice(0, -1);
+        ptlist[(open + ptlist.length) % ptlist.length] = ptlist[
+          (open + ptlist.length) % ptlist.length
+        ].slice(0, -1);
+      }
+      var canv = "";
+
+      for (var i = 0; i < ptlist.length / 2; i++) {
+        for (var j = 0; j < ptlist[i].length; j++) {
+          //ptlist.push(div([ptlist[i][j],ptlist[4+i][j]],2))
+          ptlist[i][j][1] += (Noise.noise(i, j * 0.5, seed) - 0.5) * hei;
+          ptlist[(ptlist.length / 2 + i) % ptlist.length][
+            j % ptlist[(ptlist.length / 2 + i) % ptlist.length].length
+          ][1] += (Noise.noise(i + 0.5, j * 0.5, seed) - 0.5) * hei;
+          var ln = div(
+            [
+              ptlist[i][j],
+              ptlist[(ptlist.length / 2 + i) % ptlist.length][
+                j % ptlist[(ptlist.length / 2 + i) % ptlist.length].length
+              ],
+            ],
+            2,
+          );
+          ln[0][0] += (Math.random() - 0.5) * hei * 0.5;
+          canv += poly(ln, {
+            xof: xoff,
+            yof: yoff,
+            fil: "none",
+            str: "rgba(100,100,100,0.5)",
+            wid: 2,
+          });
+        }
+      }
+
+      for (var i = 0; i < ptlist.length; i++) {
+        canv += stroke(
+          ptlist[i].map(function(x) {
+            return [x[0] + xoff, x[1] + yoff];
+          }),
+          {
+            col: "rgba(100,100,100,0.5)",
+            noi: 0.5,
+            wid: wei,
+            fun: function(x) {
+              return 1;
+            },
+          },
+        );
+      }
+      return canv;
+    };
+
+    var roof = function(xoff, yoff, args) {
+      var args = args != undefined ? args : {};
+      var hei = args.hei != undefined ? args.hei : 20;
+      var wid = args.wid != undefined ? args.wid : 120;
+      var rot = args.rot != undefined ? args.rot : 0.7;
+      var per = args.per != undefined ? args.per : 4;
+      var cor = args.cor != undefined ? args.cor : 5;
+      var wei = args.wei != undefined ? args.wei : 3;
+      var pla = args.pla != undefined ? args.pla : [0, ""];
+
+      var opf = function(ptlist) {
+        if (rot < 0.5) {
+          return flip(ptlist);
+        } else {
+          return ptlist;
+        }
+      };
+      var rrot = rot < 0.5 ? 1 - rot : rot;
+
+      var mid = -wid * 0.5 + wid * rrot;
+      var bmid = -wid * 0.5 + wid * (1 - rrot);
+      var quat = (mid + wid * 0.5) * 0.5 - mid;
+
+      var ptlist = [];
+      ptlist.push(
+        div(
+          opf([
+            [-wid * 0.5 + quat, -hei - per / 2],
+            [-wid * 0.5 + quat * 0.5, -hei / 2 - per / 4],
+            [-wid * 0.5 - cor, 0],
+          ]),
+          5,
+        ),
+      );
+      ptlist.push(
+        div(
+          opf([
+            [mid + quat, -hei],
+            [(mid + quat + wid * 0.5) / 2, -hei / 2],
+            [wid * 0.5 + cor, 0],
+          ]),
+          5,
+        ),
+      );
+      ptlist.push(
+        div(
+          opf([
+            [mid + quat, -hei],
+            [mid + quat / 2, -hei / 2 + per / 2],
+            [mid + cor, per],
+          ]),
+          5,
+        ),
+      );
+
+      ptlist.push(div(opf([[-wid * 0.5 - cor, 0], [mid + cor, per]]), 5));
+      ptlist.push(div(opf([[wid * 0.5 + cor, 0], [mid + cor, per]]), 5));
+
+      ptlist.push(
+        div(opf([[-wid * 0.5 + quat, -hei - per / 2], [mid + quat, -hei]]), 5),
+      );
+
+      var canv = "";
+
+      var polist = opf([
+        [-wid * 0.5, 0],
+        [-wid * 0.5 + quat, -hei - per / 2],
+        [mid + quat, -hei],
+        [wid * 0.5, 0],
+        [mid, per],
+      ]);
+      canv += poly(polist, { xof: xoff, yof: yoff, str: "none", fil: "white" });
+
+      for (var i = 0; i < ptlist.length; i++) {
+        canv += stroke(
+          ptlist[i].map(function(x) {
+            return [x[0] + xoff, x[1] + yoff];
+          }),
+          {
+            col: "rgba(100,100,100,0.4)",
+            noi: 1,
+            wid: wei,
+            fun: function(x) {
+              return 1;
+            },
+          },
+        );
+      }
+
+      if (pla[0] == 1) {
+        var pp = opf([
+          [mid + quat / 2, -hei / 2 + per / 2],
+          [-wid * 0.5 + quat * 0.5, -hei / 2 - per / 4],
+        ]);
+        if (pp[0][0] > pp[1][0]) {
+          pp = [pp[1], pp[0]];
+        }
+        var mp = PolyTools.midPt(pp);
+        var a = Math.atan2(pp[1][1] - pp[0][1], pp[1][0] - pp[0][0]);
+        var adeg = (a * 180) / Math.PI;
+        canv +=
+          "<text font-size='" +
+          hei * 0.6 +
+          "' font-family='Verdana'" +
+          " style='fill:rgba(100,100,100,0.9)'" +
+          " text-anchor='middle' transform='translate(" +
+          (mp[0] + xoff) +
+          "," +
+          (mp[1] + yoff) +
+          ") rotate(" +
+          adeg +
+          ")'>" +
+          pla[1] +
+          "</text>";
+      }
+      return canv;
+    };
+
+    var chance = (probability, action) => Math.random() < probability ? action() : undefined
+    var if_ = (condition, action) => condition ? action() : undefined
+
+
+    arch02 = function(x_offset, y_offset, seed = 0,
+      {height = 10, width = 50, rotation = 0.3, perspective = 5, stories = 3, style = 'grid', has_rails = false}
+    ) {
+      var horz_spacings = {
+        t_shapes: {padding: 1, count: 5},
+        fence: {padding: 1, count: 5},
+        grid: {padding: 1, count: 4}
+      }
+      var vert_spacings = {
+        t_shapes: {padding: 1, count: 2},
+        fence: {padding: 1, count: 2},
+        grid: {padding: 1, count: 3}
+      }
+
+      return range(stories).map( story => story * height * 1.5 ). // produce series of stories offsets
+             map( (story_y, story) => {
+               return box_(x_offset, y_offset - story_y, {
+                  transparent: false,
+                  height: height,
+                  width: width * 0.85**story,
+                  rotation: rotation,
+                  weight: 1.5,
+                  perspective: perspective,
+                  decorator: (wall_corners) =>
+                    decoration(style,
+                      {...wall_corners, horz_spacing: horz_spacings[style], vert_spacing: vert_spacings[style]})
+                }) +
+                if_(has_rails, ()=>
+                  rail(x_offset, y_offset - story_y, story * 0.2, {
+                    wid: width * 0.85**story * 1.1,
+                    hei: height / 2,
+                    per: perspective,
+                    rot: rotation,
+                    wei: 0.5,
+                    tra: false,
+                  })) +
+                roof(x_offset, y_offset - story_y - height, {
+                  hei: height,
+                  wid: width * 0.9**story,
+                  rot: rotation,
+                  wei: 1.5,
+                  per: perspective,
+                  pla: if_(stories == 1, ()=> chance(2/3, ()=> [1, "Pizza Hut"])),
+                })
+             })
+    }
 </script>
 
 <body style="margin:0">
@@ -592,6 +1042,10 @@
       <th>Debug info</th>
     </tr>
     <tr id="box">
+      <td class="pic"></td>
+      <td class="debug"><pre style="max-width: 800; overflow-x: scroll;font-size: small;"></pre></td>
+    </tr>
+    <tr id="arch02">
       <td class="pic"></td>
       <td class="debug"><pre style="max-width: 800; overflow-x: scroll;font-size: small;"></pre></td>
     </tr>
@@ -624,7 +1078,15 @@
           decorator(style, {...a, horz_spacing: horz_spacings[style], vert_spacing: vert_spacings[style]})
       })
 
-    document.getElementById("box").getElementsByClassName('pic')[0].innerHTML =
-      "<svg id='SVG' xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g id='G'>" +
-        box + "</g></svg>";
+    // var house = arch02(100, 100, 0, {width: 100, height: 15, has_rails: true})
+    var house = arch02(100, 100, 0, {width: 100, height: 15, stories: 1, has_rails: true})
+
+    function showSVG(rowId, svg) {
+      document.getElementById(rowId).getElementsByClassName('pic')[0].innerHTML =
+        "<svg id='SVG' xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g id='G'>" +
+          svg + "</g></svg>";
+    }
+
+    showSVG('box', box)
+    showSVG('arch02', house)
 </script>
