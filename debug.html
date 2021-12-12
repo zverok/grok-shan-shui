@@ -1010,8 +1010,8 @@
                   rotation: rotation,
                   weight: 1.5,
                   perspective: perspective,
-                  decorator: (wall_corners) =>
-                    decoration(style,
+                  decoration: (wall_corners) =>
+                    decorator(style,
                       {...wall_corners, horz_spacing: horz_spacings[style], vert_spacing: vert_spacings[style]})
                 }) +
                 if_(has_rails, ()=>

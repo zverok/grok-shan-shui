@@ -519,6 +519,18 @@
   }
 </script>
 
+<script id="zverok-utils">
+  var chance = (probability, action) => Math.random() < probability ? action() : undefined
+  var if_ = (condition, action) => condition ? action() : undefined
+
+  Array.prototype.eachCons = function(size) {
+    var others = range(size).map(i => this.slice(i)).slice(1)
+    return this.slice(null, this.length - size + 1).zip(...others)
+  }
+
+  Array.prototype.last = function() { return this[this.length - 1] }
+
+</script>
 <script>
   console.log("************************************************");
 
@@ -582,6 +594,46 @@
       { fil: col, str: col, wid: out },
     );
     return canv;
+  }
+
+  function stroke_(points,
+    {x_offset = 0, y_offset = 0, width = 2, color = rgba(200,200,200,0.9), noise = 0.5, outline = 1,
+      shaper = (x) => Math.sin(x * Math.PI)}
+  ) {
+
+    if (points.length == 0) return "";
+
+    var n0 = Math.random() * 10;
+    var transitions = points.eachCons(3).map( ([[x_prev, y_prev], [x, y], [x_post, y_post]], idx) => {
+      i = idx + 1
+      var distance = width * shaper(i / points.length);
+      distance = distance * (1 - noise) + distance * noise * Noise.noise(i * 0.5, n0);
+
+      var angle_before = Math.atan2(y - y_prev, x - x_prev)
+      var angle_after = Math.atan2(y - y_post, x - x_post)
+      var angle = (angle_before + angle_after) / 2;
+      if (angle < angle_after) angle += Math.PI;
+
+      return [distance, angle]
+    })
+
+    var vertexes_top = transitions.zip(points.slice(1)).map(
+      ([[distance, angle], [x, y]]) => [x + distance * Math.cos(angle), y + distance * Math.sin(angle)]
+    )
+
+    var vertexes_bottom = transitions.zip(points.slice(1)).map(
+      ([[distance, angle], [x, y]]) => [x - distance * Math.cos(angle), y - distance * Math.sin(angle)]
+    )
+
+    return [
+      points[0],
+      ...vertexes_top,
+      points.last(),
+      ...vertexes_bottom.reverse(),
+      points[0]
+    ].
+      map(([x, y]) => [x + x_offset, y + y_offset]).
+      and_then( vertexes => poly_(vertexes, {fill: color, stroke: color, width: outline}))
   }
 
   function blob(x, y, args) {
@@ -700,6 +752,14 @@
       rlist.push(plist[plist.length - 1]);
     }
     return rlist;
+  }
+
+  function extrapolate(points, {num_of_midpoints}) {
+    return points.eachCons(2).flatMap( ([[x1, y1], [x2, y2]]) =>
+      range(num_of_midpoints).map(
+        i => [x1 + (x2 - x1) / num_of_midpoints * i, y1 + (y2 - y1) / num_of_midpoints * i]
+      )
+    ).concat([points.last()])
   }
 
   var texture = function(ptlist, args) {
@@ -1994,9 +2054,9 @@
           if (tt == 1) {
             return Arch.arch02(x + xoff, y + yoff, seed, {
               width: normRand(40, 70),
-              sto: randChoice([1, 2, 2, 3]),
+              stories: randChoice([1, 2, 2, 3]),
               rotation: Math.random(),
-              sty: randChoice([1, 2, 3]),
+              style: randChoice(['t_shapes', 'fence', 'grid']),
             });
           } else if (tt == 2) {
             return Arch.arch04(x + xoff, y + yoff, seed, {
@@ -2689,70 +2749,86 @@
       return canv;
     };
 
-    var box_ = function(xoff, yoff,
+    var box_ = function(x_offset, y_offset,
       {
-        height = 20, width = 120, rotation = 0.7, per = 4,
-        transparent = true, bottom = true, weight = 3, dec = (a) => [],
+        height = 20, width = 120, rotation = 0.7, perspective = 4,
+        transparent = true, has_floor = true, weight = 3, decoration = (a) => [],
         color = rgba(100,100,100,0.4)
       }
     ) {
-      var mid = -width * 0.5 + width * rotation;
-      var bmid = -width * 0.5 + width * (1 - rotation);
-      var ptlist = [];
-      ptlist.push(div([[-width * 0.5, -height], [-width * 0.5, 0]], 5));
-      ptlist.push(div([[width * 0.5, -height], [width * 0.5, 0]], 5));
-      if (bottom) {
-        ptlist.push(div([[-width * 0.5, 0], [mid, per]], 5));
-        ptlist.push(div([[width * 0.5, 0], [mid, per]], 5));
-      }
-      ptlist.push(div([[mid, -height], [mid, per]], 5));
-      if (transparent) {
-        if (bottom) {
-          ptlist.push(div([[-width * 0.5, 0], [bmid, -per]], 5));
-          ptlist.push(div([[width * 0.5, 0], [bmid, -per]], 5));
-        }
-        ptlist.push(div([[bmid, -height], [bmid, -per]], 5));
-      }
+      var left = -width/2
+      var right = +width/2
+      var top = -height
+      var bottom = 0
 
-      var surf = (rotation < 0.5) * 2 - 1;
-      ptlist = ptlist.concat(
-        dec({
-          pul: [surf * width * 0.5, -height],
-          pur: [mid, -height + per],
-          pdl: [surf * width * 0.5, 0],
-          pdr: [mid, per],
+      var front_x = left + width * rotation;
+      var front_y = perspective
+
+      var back_x = left + width * (1 - rotation);
+      var back_y = -perspective
+
+      // First, side of the house
+      var lines = [
+        [ [left , top], [left , bottom] ],
+        [ [right, top], [right, bottom] ]
+      ]
+      // background post
+      if (transparent) { lines.push([ [back_x, top], [back_x, back_y] ]) }
+
+      if (has_floor) {
+        lines = lines.concat([
+          [ [left , bottom], [front_x, front_y] ],
+          [ [right, bottom], [front_x, front_y] ]
+        ])
+        if(transparent) { // two background lines of the floor
+          lines = lines.concat([
+            [[left , bottom], [back_x, back_y] ],
+            [[right, bottom], [back_x, back_y] ]
+          ])
+        }
+      }
+      // foreground post, should come last
+      lines.push([[front_x, top], [front_x, front_y]])
+
+      lines = lines.map( points => extrapolate(points, {num_of_midpoints: 5}) )
+
+      var side = (rotation < 0.5) ? right : left;
+      lines = lines.concat(
+        decoration({
+          up_left:    [side   , top],
+          up_right:   [front_x, top + perspective],
+          down_left:  [side   , bottom],
+          down_right: [front_x, front_y],
         }),
       );
 
-      var polist = [
-        [-width * 0.5, -height],
-        [width * 0.5, -height],
-        [width * 0.5, 0],
-        [mid, per],
-        [-width * 0.5, 0],
-      ];
-
       var canv = "";
       if (!transparent) {
-        canv += poly(polist, {
-          xof: xoff,
-          yof: yoff,
-          str: "none",
-          fil: "white",
-        });
-      }
-
-      for (var i = 0; i < ptlist.length; i++) {
-        canv += stroke(
-          ptlist[i].map(([x, y]) => [x + xoff, y + yoff]),
-          {
-            col: color.toString(),
-            noi: 1,
-            wid: weight,
-            fun: (x) => 1
-          },
+        canv += poly_(
+          [
+            [left   , top    ],
+            [right  , top    ],
+            [right  , bottom ],
+            [front_x, front_y],
+            [left   , bottom ],
+          ],
+          {x_offset, y_offset, stroke: "none", fill: "white"}
         );
       }
+
+      canv += lines.map( line =>
+        stroke_(
+          line,
+          {
+            x_offset,
+            y_offset,
+            color,
+            noise: 1,
+            width: weight,
+            shaper: (x) => 1
+          },
+        )
+      ).join()
       return canv;
     };
 
@@ -2820,31 +2896,28 @@
       return plist;
     };
 
-    var deco_ = function(style, args) {
-      var args = args != undefined ? args : {};
-      var pul = args.pul != undefined ? args.pul : [0, 0];
-      var pur = args.pur != undefined ? args.pur : [0, 100];
-      var pdl = args.pdl != undefined ? args.pdl : [100, 0];
-      var pdr = args.pdr != undefined ? args.pdr : [100, 100];
-      var hsp = args.hsp != undefined ? args.hsp : [1, 3];
-      var vsp = args.vsp != undefined ? args.vsp : [1, 2];
-
+    var decorator = function(style,
+      {
+        up_left = [0, 0], up_right = [0, 100], down_left=[100, 0], down_right=[100, 100],
+        horz_spacing = {padding: 1, count: 3}, vert_spacing = {padding: 1, count: 2}
+      }
+    ) {
       var plist = [];
-      var dl = div([pul, pdl], vsp[1]);
-      var dr = div([pur, pdr], vsp[1]);
-      var du = div([pul, pur], hsp[1]);
-      var dd = div([pdl, pdr], hsp[1]);
+      var dl = div([up_left, down_left], vert_spacing.count);
+      var dr = div([up_right, down_right], vert_spacing.count);
+      var du = div([up_left, up_right], horz_spacing.count);
+      var dd = div([down_left, down_right], horz_spacing.count);
 
-      if (style == 1) {
+      if (style == 't_shapes') {
         //-| |-
-        var mlu = du[hsp[0]];
-        var mru = du[du.length - 1 - hsp[0]];
-        var mld = dd[hsp[0]];
-        var mrd = dd[du.length - 1 - hsp[0]];
+        var mlu = du[horz_spacing.padding];
+        var mru = du[du.length - 1 - horz_spacing.padding];
+        var mld = dd[horz_spacing.padding];
+        var mrd = dd[du.length - 1 - horz_spacing.padding];
 
-        for (var i = vsp[0]; i < dl.length - vsp[0]; i += vsp[0]) {
-          var mml = div([mlu, mld], vsp[1])[i];
-          var mmr = div([mru, mrd], vsp[1])[i];
+        for (var i = vert_spacing.padding; i < dl.length - vert_spacing.padding; i += vert_spacing.padding) {
+          var mml = div([mlu, mld], vert_spacing.count)[i];
+          var mmr = div([mru, mrd], vert_spacing.count)[i];
           var ml = dl[i];
           var mr = dr[i];
           plist.push(div([mml, ml], 5));
@@ -2852,26 +2925,26 @@
         }
         plist.push(div([mlu, mld], 5));
         plist.push(div([mru, mrd], 5));
-      } else if (style == 2) {
+      } else if (style == 'fence') {
         //||||
 
-        for (var i = hsp[0]; i < du.length - hsp[0]; i += hsp[0]) {
+        for (var i = horz_spacing.padding; i < du.length - horz_spacing.padding; i += horz_spacing.padding) {
           var mu = du[i];
           var md = dd[i];
           plist.push(div([mu, md], 5));
         }
-      } else if (style == 3) {
+      } else if (style == 'grid') {
         //|##|
-        var mlu = du[hsp[0]];
-        var mru = du[du.length - 1 - hsp[0]];
-        var mld = dd[hsp[0]];
-        var mrd = dd[du.length - 1 - hsp[0]];
+        var mlu = du[horz_spacing.padding];
+        var mru = du[du.length - 1 - horz_spacing.padding];
+        var mld = dd[horz_spacing.padding];
+        var mrd = dd[du.length - 1 - horz_spacing.padding];
 
-        for (var i = vsp[0]; i < dl.length - vsp[0]; i += vsp[0]) {
-          var mml = div([mlu, mld], vsp[1])[i];
-          var mmr = div([mru, mrd], vsp[1])[i];
-          var mmu = div([mlu, mru], vsp[1])[i];
-          var mmd = div([mld, mrd], vsp[1])[i];
+        for (var i = vert_spacing.padding; i < dl.length - vert_spacing.padding; i += vert_spacing.padding) {
+          var mml = div([mlu, mld], vert_spacing.count)[i];
+          var mmr = div([mru, mrd], vert_spacing.count)[i];
+          var mmu = div([mlu, mru], vert_spacing.count)[i];
+          var mmd = div([mld, mrd], vert_spacing.count)[i];
 
           var ml = dl[i];
           var mr = dr[i];
@@ -3192,41 +3265,49 @@
       return canv;
     };
 
-    this.arch02 = function(xoff, yoff, seed = 0,
-      {height = 10, width = 50, rotation = 0.3, per = 5, sto = 3, sty = 1, has_rails = false}
+    this.arch02 = function(x_offset, y_offset, seed = 0,
+      {height = 10, width = 50, rotation = 0.3, perspective = 5, stories = 3, style = 'grid', has_rails = false}
     ) {
-      var hsps = [[], [1, 5], [1, 5], [1, 4]]
-      var vsps = [[], [1, 2], [1, 2], [1, 3]]
+      var horz_spacings = {
+        t_shapes: {padding: 1, count: 5},
+        fence: {padding: 1, count: 5},
+        grid: {padding: 1, count: 4}
+      }
+      var vert_spacings = {
+        t_shapes: {padding: 1, count: 2},
+        fence: {padding: 1, count: 2},
+        grid: {padding: 1, count: 3}
+      }
 
-      return range(sto).map( i => i * height * 1.5 ). // produce series of h_offsets
-             map( (hoff, i) => {
-               return box_(xoff, yoff - hoff, {
+      return range(stories).map( story => story * height * 1.5 ). // produce series of stories offsets
+             map( (story_y, story) => {
+               return box_(x_offset, y_offset - story_y, {
                   transparent: false,
                   height: height,
-                  width: width * Math.pow(0.85, i),
+                  width: width * 0.85**story,
                   rotation: rotation,
                   weight: 1.5,
-                  per: per,
-                  color: rgba(255,0,0,0.5),
-                  dec: (a) => deco(sty, {...a, hsp: hsps[sty], vsp: vsps[sty]})
+                  perspective: perspective,
+                  decoration: (wall_corners) =>
+                    decorator(style,
+                      {...wall_corners, horz_spacing: horz_spacings[style], vert_spacing: vert_spacings[style]})
                 }) +
-                (has_rails ?
-                  rail(xoff, yoff - hoff, i * 0.2, {
-                    wid: width * Math.pow(0.85, i) * 1.1,
+                if_(has_rails, ()=>
+                  rail(x_offset, y_offset - story_y, story * 0.2, {
+                    wid: width * 0.85**story * 1.1,
                     hei: height / 2,
-                    per: per,
+                    per: perspective,
                     rot: rotation,
                     wei: 0.5,
                     tra: false,
-                  })
-                : '') +
-                roof(xoff, yoff - hoff - height, {
+                  })) +
+                roof(x_offset, y_offset - story_y - height, {
                   hei: height,
-                  wid: width * Math.pow(0.9, i),
+                  wid: width * 0.9**story,
                   rot: rotation,
                   wei: 1.5,
-                  per: per,
-                  pla: (sto == 1 && Math.random() < 1 / 3 ? [1, "Pizza Hut"] : undefined),
+                  per: perspective,
+                  pla: if_(stories == 1, ()=> chance(2/3, ()=> [1, "Pizza Hut"])),
                 })
              })
     };
@@ -3832,8 +3913,7 @@
       return true;
     }
 
-    function chadd(r, mind) {
-      mind = mind == undefined ? 10 : mind;
+    function chadd(r, mind = 10) {
       for (var k = 0; k < reg.length; k++) {
         if (Math.abs(reg[k].x - r.x) < mind) {
           return false;
@@ -3846,24 +3926,16 @@
 
     var reg = [];
     var samp = 0.03;
-    var ns = function(x, y) {
-      return Math.max(Noise.noise(x * samp) - 0.55, 0) * 2;
-    };
-    var nns = function(x) {
-      return 1 - Noise.noise(x * samp);
-    };
-    var nnns = function(x, y) {
-      return Math.max(Noise.noise(x * samp * 2, 2) - 0.55, 0) * 2;
-    };
-    var yr = function(x) {
-      return Noise.noise(x * 0.01, Math.PI);
-    };
+    var ns = (x, y) => Math.max(Noise.noise(x * samp) - 0.55, 0) * 2;
+    var nns = (x) => 1 - Noise.noise(x * samp);
+    var nnns = (x, y) => Math.max(Noise.noise(x * samp * 2, 2) - 0.55, 0) * 2;
+    var yr = (x) => Noise.noise(x * 0.01, Math.PI);
 
     var xstep = 5;
     var mwid = 200;
     for (var i = xmin; i < xmax; i += xstep) {
       var i1 = Math.floor(i / xstep);
-      MEM.planmtx[i1] = MEM.planmtx[i1] || 0;
+      MEM.planmtx[i1] ||= 0;
     }
 
     for (var i = xmin; i < xmax; i += xstep) {
@@ -3950,40 +4022,23 @@
         tag: "?",
         x: i,
         y: 100,
-        canv: Arch.arch02(i, 500, 0, { sto: 1, rotation: Math.random() }),
+        canv: Arch.arch02(i, 500, 0, { stories: 1, rotation: Math.random() }),
       });
     }
   }
 
   function chunkloader(xmin, xmax) {
-    var add = function(nch) {
-      if (nch.canv.includes("NaN")) {
-        // console.log("gotcha:");
-        // console.log(nch.tag);
-        nch.canv = nch.canv.replace(/NaN/g, -1000);
+    var add = function(new_chunk) {
+      if (MEM.chunks.length == 0 || new_chunk.y >= MEM.chunks.last().y) {
+        MEM.chunks.push(new_chunk);
       }
-      if (MEM.chunks.length == 0) {
-        MEM.chunks.push(nch);
-        return;
+      else if (new_chunk.y <= MEM.chunks[0].y) {
+        MEM.chunks.unshift(new_chunk);
       } else {
-        if (nch.y <= MEM.chunks[0].y) {
-          MEM.chunks.unshift(nch);
-          return;
-        } else if (nch.y >= MEM.chunks[MEM.chunks.length - 1].y) {
-          MEM.chunks.push(nch);
-          return;
-        } else {
-          for (var j = 0; j < MEM.chunks.length - 1; j++) {
-            if (MEM.chunks[j].y <= nch.y && nch.y <= MEM.chunks[j + 1].y) {
-              MEM.chunks.splice(j + 1, 0, nch);
-              return;
-            }
-          }
-        }
+        MEM.chunks.eachCons(2).
+          findIndex( ([chunk1, chunk2], i) => new_chunk.y >= chunk1.y && new_chunk.y <= chunk2.y ).
+          and_then( idx => MEM.chunks.splice(idx + 1, 0, new_chunk) )
       }
-      console.log("EH?WTF!");
-      console.log(MEM.chunks);
-      console.log(nch);
     };
 
     while (xmax > MEM.xmax - MEM.cwid || xmin < MEM.xmin + MEM.cwid) {
@@ -3998,88 +4053,28 @@
         MEM.xmin = MEM.xmin - MEM.cwid;
       }
 
-      for (var i = 0; i < plan.length; i++) {
-        if (plan[i].tag == "mount") {
-          add({
-            tag: plan[i].tag,
-            x: plan[i].x,
-            y: plan[i].y,
-            canv: Mount.mountain(plan[i].x, plan[i].y, i * 2 * Math.random()),
-            //{col:function(x){return "rgba(100,100,100,"+(0.5*Math.random()*plan[i].y/MEM.windy)+")"}}),
+      plan.forEach( ({tag, x, y}, i) => {
+        switch(tag) {
+          case "mount":
+            add({tag, x, y,            canv: Mount.mountain(x, y, rand(i * 2))});
+            add({tag, x, y: y - 10000, canv: water(x, y, i * 2)});
+            break
+        case "flatmount":
+          add({tag, x, y,
+            canv: Mount.flatMount(x, y, rand(2 * Math.PI), {wid: rand(600, 1000), hei: 100, cho: rand(0.5, 0.7)}),
           });
-          add({
-            tag: plan[i].tag,
-            x: plan[i].x,
-            y: plan[i].y - 10000,
-            canv: water(plan[i].x, plan[i].y, i * 2),
-          });
-        } else if (plan[i].tag == "flatmount") {
-          add({
-            tag: plan[i].tag,
-            x: plan[i].x,
-            y: plan[i].y,
-            canv: Mount.flatMount(
-              plan[i].x,
-              plan[i].y,
-              2 * Math.random() * Math.PI,
-              {
-                wid: 600 + Math.random() * 400,
-                hei: 100,
-                cho: 0.5 + Math.random() * 0.2,
-              },
-            ),
-          });
-        } else if (plan[i].tag == "distmount") {
-          add({
-            tag: plan[i].tag,
-            x: plan[i].x,
-            y: plan[i].y,
-            canv: Mount.distMount(plan[i].x, plan[i].y, Math.random() * 100, {
-              hei: 150,
-              len: randChoice([500, 1000, 1500]),
-            }),
-          });
-        } else if (plan[i].tag == "boat") {
-          add({
-            tag: plan[i].tag,
-            x: plan[i].x,
-            y: plan[i].y,
-            canv: Arch.boat01(plan[i].x, plan[i].y, Math.random(), {
-              sca: plan[i].y / 800,
-              fli: randChoice([true, false]),
-            }),
-          });
-        } else if (plan[i].tag == "redcirc") {
-          add({
-            tag: plan[i].tag,
-            x: plan[i].x,
-            y: plan[i].y,
-            canv:
-              "<circle cx='" +
-              plan[i].x +
-              "' cy='" +
-              plan[i].y +
-              "' r='20' stroke='black' fill='red' />",
-          });
-        } else if (plan[i].tag == "greencirc") {
-          add({
-            tag: plan[i].tag,
-            x: plan[i].x,
-            y: plan[i].y,
-            canv:
-              "<circle cx='" +
-              plan[i].x +
-              "' cy='" +
-              plan[i].y +
-              "' r='20' stroke='black' fill='green' />",
-          });
+          break
+        case "distmount":
+          add({tag, x, y,
+               canv: Mount.distMount(x, y, rand(100), {hei: 150, len: randChoice([500, 1000, 1500])})});
+          break
+        case "boat":
+          add({tag, x, y, canv: Arch.boat01(x, y, Math.random(), {sca: y / 800, fli: randChoice([true, false])})});
+          break
+        default:
+          throw `weird tag: ${tag}`
         }
-        // add ({
-        //   x: plan[i].x,
-        //   y: plan[i].y,
-        //   canv:"<circle cx='"+plan[i].x+"' cy='"+plan[i].y+"' r='20' stroke='black' fill='red' />"
-        // })
-      }
+      })
     }
   }
 
