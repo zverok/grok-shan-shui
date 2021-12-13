@@ -856,8 +856,17 @@
     return Array.from({length: n}, (_, i) => fun(i));
   }
 
-  function range(n) {
-    return Array.from({length: Math.ceil(n)}, (_, i) => i);
+  function range(from, to = undefined, step = undefined) {
+    if(to == undefined) {
+      to = from
+      from = 0
+    }
+    step ||= 1
+    var res = []
+    for(i = from; i < to; i += step) {
+      res.push(i)
+    }
+    return res;
   }
 
   Array.prototype.zip = function(...others) {
@@ -3933,67 +3942,51 @@
 
     var xstep = 5;
     var mwid = 200;
-    for (var i = xmin; i < xmax; i += xstep) {
-      var i1 = Math.floor(i / xstep);
-      MEM.planmtx[i1] ||= 0;
-    }
 
-    for (var i = xmin; i < xmax; i += xstep) {
-      for (var j = 0; j < yr(i) * 480; j += 30) {
-        if (locmax(i, j, ns, 2)) {
-          var xof = i + 2 * (Math.random() - 0.5) * 500;
-          var yof = j + 300;
-          var r = { tag: "mount", x: xof, y: yof, h: ns(i, j) };
-          var res = chadd(r);
-          if (res) {
-            for (
-              var k = Math.floor((xof - mwid) / xstep);
-              k < (xof + mwid) / xstep;
-              k++
-            ) {
-              MEM.planmtx[k] += 1;
-            }
+    var x_range = range(xmin, xmax, xstep)
+
+    x_range.forEach( x => MEM.planmtx[Math.floor(x / xstep)] ||= 0)
+
+    x_range.forEach( x => {
+      var max_y = yr(x) * 480
+      range(0, max_y, 30).forEach( y => {
+        if (locmax(x, y, ns, 2)) {
+          var x_offset = x + rand(-500, 500);
+          var y_offset = y + 300;
+          if (chadd({ tag: "mount", x: x_offset, y: y_offset, h: ns(x, y) })) {
+            range(Math.floor((x_offset - mwid) / xstep), (x_offset + mwid) / xstep).
+              forEach( dx => MEM.planmtx[dx] += 1 )
           }
         }
-      }
-      if (Math.abs(i) % 1000 < Math.max(1, xstep - 1)) {
-        var r = {
+      })
+      if (Math.abs(x) % 1000 < Math.max(1, xstep - 1)) {
+        chadd({
           tag: "distmount",
-          x: i,
-          y: 280 - Math.random() * 50,
-          h: ns(i, j),
-        };
-        chadd(r);
+          x: x,
+          y: 280 - rand(50),
+          h: ns(x, max_y),
+        });
       }
-    }
-    console.log([xmin, xmax]);
-    for (var i = xmin; i < xmax; i += xstep) {
-      if (MEM.planmtx[Math.floor(i / xstep)] == 0) {
-        //var r = {tag:"redcirc",x:i,y:700}
-        //console.log(i)
-        if (Math.random() < 0.01) {
-          for (var j = 0; j < 4 * Math.random(); j++) {
-            var r = {
-              tag: "flatmount",
-              x: i + 2 * (Math.random() - 0.5) * 700,
-              y: 700 - j * 50,
-              h: ns(i, j),
-            };
-            chadd(r);
-          }
-        }
-      } else {
-        // var r = {tag:"greencirc",x:i,y:700}
-        // chadd(r)
-      }
-    }
+    })
 
-    for (var i = xmin; i < xmax; i += xstep) {
-      if (Math.random() < 0.2) {
-        var r = { tag: "boat", x: i, y: 300 + Math.random() * 390 };
-        chadd(r, 400);
+    x_range.forEach( x => {
+      if (MEM.planmtx[Math.floor(x / xstep)] == 0) {
+        chance(0.01, () => {
+          for (var y = 0; y < rand(4); y++) {
+            chadd({
+              tag: "flatmount",
+              x: x + rand(-700, 700),
+              y: 700 - y * 50,
+              h: ns(x, y),
+            });
+          }
+        })
       }
-    }
+    })
+
+    x_range.forEach( x =>
+      chance(0.2, () => chadd({ tag: "boat", x, y: 300 + rand(390) }, 400))
+    )
 
     return reg;
   }
