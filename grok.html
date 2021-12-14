@@ -3906,15 +3906,35 @@
     return canv;
   }
 
+  class MountainMap {
+    constructor(step) {
+      this.data = []
+      this.step = step
+    }
+
+    get(at) { return this.data[Math.floor(at / this.step)] }
+    set(at, value) { this.data[Math.floor(at / this.step)] = value }
+    inc(at) { this.data[Math.floor(at / this.step)] += 1 }
+
+    isEmpty(at) { return this.get(at) == 0 }
+
+    initRange(from, to) {
+      range(Math.floor(from / this.step), Math.ceil(to / this.step)).forEach( i => this.data[i] ||= 0 )
+    }
+    incRange(from, to) {
+      range(Math.floor(from / this.step), Math.ceil(to / this.step)).forEach( i => this.data[i] += 1 )
+    }
+  }
+
   function mountplanner(xmin, xmax) {
-    function locmax(x, y, f, r) {
+    function is_local_maximum(x, y, f, {vicinity}) {
       var z0 = f(x, y);
       if (z0 <= 0.3) {
         return false;
       }
-      for (var i = x - r; i < x + r; i++) {
-        for (var j = y - r; j < y + r; j++) {
-          if (f(i, j) > z0) {
+      for (var nx = x - vicinity; nx < x + vicinity; nx++) {
+        for (var ny = y - vicinity; ny < y + vicinity; ny++) {
+          if (f(nx, ny) > z0) {
             return false;
           }
         }
@@ -3922,73 +3942,69 @@
       return true;
     }
 
-    function chadd(r, mind = 10) {
-      for (var k = 0; k < reg.length; k++) {
-        if (Math.abs(reg[k].x - r.x) < mind) {
-          return false;
-        }
+    var registry = [];
+
+    registry.pushChunk = function(chunk, min_distance = 10) {
+      if(this.find( rchunk => Math.abs(rchunk.x - chunk.x) < min_distance )) {
+        return false
       }
-      console.log("+");
-      reg.push(r);
+      this.push(chunk);
       return true;
     }
 
-    var reg = [];
     var samp = 0.03;
-    var ns = (x, y) => Math.max(Noise.noise(x * samp) - 0.55, 0) * 2;
-    var nns = (x) => 1 - Noise.noise(x * samp);
-    var nnns = (x, y) => Math.max(Noise.noise(x * samp * 2, 2) - 0.55, 0) * 2;
-    var yr = (x) => Noise.noise(x * 0.01, Math.PI);
+    var noise = (x, y) => Math.max(Noise.noise(x * samp) - 0.55, 0) * 2;
 
     var xstep = 5;
-    var mwid = 200;
+    var mountain_width = 200;
 
     var x_range = range(xmin, xmax, xstep)
 
-    x_range.forEach( x => MEM.planmtx[Math.floor(x / xstep)] ||= 0)
+    MEM.occupied_x ||= new MountainMap(xstep)
+    MEM.occupied_x.initRange(xmin, xmax)
 
     x_range.forEach( x => {
-      var max_y = yr(x) * 480
-      range(0, max_y, 30).forEach( y => {
-        if (locmax(x, y, ns, 2)) {
+      var max_y = Noise.noise(x * 0.01, Math.PI) * 480
+
+      range(0, max_y, 30).
+        filter( y => is_local_maximum(x, y, noise, {vicinity: 2}) ).
+        forEach( y => {
           var x_offset = x + rand(-500, 500);
           var y_offset = y + 300;
-          if (chadd({ tag: "mount", x: x_offset, y: y_offset, h: ns(x, y) })) {
-            range(Math.floor((x_offset - mwid) / xstep), (x_offset + mwid) / xstep).
-              forEach( dx => MEM.planmtx[dx] += 1 )
+          if (registry.pushChunk({ tag: "mount", x: x_offset, y: y_offset, h: noise(x, y) })) {
+            MEM.occupied_x.incRange(x_offset - mountain_width, x_offset + mountain_width)
           }
-        }
-      })
-      if (Math.abs(x) % 1000 < Math.max(1, xstep - 1)) {
-        chadd({
+        })
+
+      if (Math.abs(x) % 1000 < xstep - 1) {
+        registry.pushChunk({
           tag: "distmount",
           x: x,
           y: 280 - rand(50),
-          h: ns(x, max_y),
+          h: noise(x, max_y),
         });
       }
     })
 
-    x_range.forEach( x => {
-      if (MEM.planmtx[Math.floor(x / xstep)] == 0) {
-        chance(0.01, () => {
+    x_range.
+      filter( x => MEM.occupied_x.isEmpty(x) ).
+      forEach( x => chance(0.01, () => {
           for (var y = 0; y < rand(4); y++) {
-            chadd({
+            registry.pushChunk({
               tag: "flatmount",
               x: x + rand(-700, 700),
               y: 700 - y * 50,
-              h: ns(x, y),
+              h: noise(x, y),
             });
           }
         })
-      }
-    })
+      )
 
     x_range.forEach( x =>
-      chance(0.2, () => chadd({ tag: "boat", x, y: 300 + rand(390) }, 400))
+      chance(0.2, () => registry.pushChunk({ tag: "boat", x, y: 300 + rand(390) }, 400))
     )
 
-    return reg;
+    return registry;
   }
 
   MEM = {
@@ -4001,7 +4017,7 @@
     lasttick: 0,
     windx: 3000,
     windy: 800,
-    planmtx: [],
+    occupied_x: null,
   };
 
   function dummyloader(xmin, xmax) {
