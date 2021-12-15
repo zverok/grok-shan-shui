@@ -1884,54 +1884,34 @@
       return ret ? ftlist : canv;
     };
 
-    this.mountain = function(xoff, yoff, seed, args) {
-      var args = args != undefined ? args : {};
-      var hei = args.hei != undefined ? args.hei : 100 + Math.random() * 400;
-      var wid = args.wid != undefined ? args.wid : 400 + Math.random() * 200;
-      var tex = args.tex != undefined ? args.tex : 200;
-      var veg = args.veg != undefined ? args.veg : true;
-      var ret = args.ret != undefined ? args.ret : 0;
-      var col = args.col != undefined ? args.col : undefined;
-
-      seed = seed != undefined ? seed : 0;
-
+    this.mountain = function(xoff, yoff, seed = 0,
+      {height = rand(100, 500), width = rand(400, 600), tex = 200, veg = true, ret = 0, color}
+    ) {
       var canv = "";
 
-      var ptlist = [];
-      var h = hei;
-      var w = wid;
-      var reso = [10, 50];
+      var h = height;
+      var w = width;
+      var resolution = {y: 10, x: 50};
 
       var hoff = 0;
-      for (var j = 0; j < reso[0]; j++) {
-        hoff += (Math.random() * yoff) / 100;
-        ptlist.push([]);
-        for (var i = 0; i < reso[1]; i++) {
-          var x = (i / reso[1] - 0.5) * Math.PI;
-          var y = Math.cos(x);
-          y *= Noise.noise(x + 10, j * 0.15, seed);
-          var p = 1 - j / reso[0];
-          ptlist[ptlist.length - 1].push([
-            (x / Math.PI) * w * p,
-            -y * h * p + hoff,
-          ]);
-        }
-      }
+
+      var ptlist = range(resolution.y).
+        map( yi => {
+          hoff += rand(yoff / 100)
+          return range(resolution.x).map( xi => {
+            var x = (xi / resolution.x - 0.5) * Math.PI;
+            var y = Math.cos(x) * Noise.noise(x + 10, yi * 0.15, seed);
+            var p = 1 - yi / resolution.y;
+            return [(x / Math.PI) * w * p, -y * h * p + hoff]
+          })
+        })
 
       function vegetate(treeFunc, growthRule, proofRule) {
-        var veglist = [];
-        for (var i = 0; i < ptlist.length; i += 1) {
-          for (var j = 0; j < ptlist[i].length; j += 1) {
-            if (growthRule(i, j)) {
-              veglist.push([ptlist[i][j][0], ptlist[i][j][1]]);
-            }
-          }
-        }
-        for (var i = 0; i < veglist.length; i++) {
-          if (proofRule(veglist, i)) {
-            canv += treeFunc(veglist[i][0], veglist[i][1]);
-          }
-        }
+        canv += ptlist.
+                flatMap( (points, xi) => points.filter( (point, yi) => growthRule(xi, yi) ) ).
+                and_then( veglist => veglist.filter( (_, i) => proofRule(veglist, i) ) ).
+                map( ([x, y]) => treeFunc(x, y) ).
+                join()
       }
       //RIM
       vegetate(
@@ -1953,7 +1933,7 @@
       );
 
       //WHITE BG
-      canv += poly(ptlist[0].concat([[0, reso[0] * 4]]), {
+      canv += poly(ptlist[0].concat([[0, resolution.y * 4]]), {
         xof: xoff,
         yof: yoff,
         fil: "white",
@@ -1973,7 +1953,7 @@
         yof: yoff,
         tex: tex,
         sha: randChoice([0, 0, 0, 0, 5]),
-        col: col,
+        col: color,
       });
 
       //TOP
@@ -4065,7 +4045,7 @@
       plan.forEach( ({tag, x, y}, i) => {
         switch(tag) {
           case "mount":
-            add({tag, x, y,            canv: Mount.mountain(x, y, rand(i * 2))});
+            add({tag, x, y,            canv: Mount.mountain(x, y, rand(i * 2), {})});
             add({tag, x, y: y - 10000, canv: water(x, y, i * 2)});
             break
         case "flatmount":
