@@ -1884,31 +1884,31 @@
       return ret ? ftlist : canv;
     };
 
-    this.mountain = function(xoff, yoff, seed = 0,
+    Object.defineProperty(Array.prototype, 'first', {get: function() { return this[0] }})
+
+    this.mountain = function(x_offset, y_offset, seed = 0,
       {height = rand(100, 500), width = rand(400, 600), tex = 200, veg = true, ret = 0, color}
     ) {
       var canv = "";
 
-      var h = height;
-      var w = width;
-      var resolution = {y: 10, x: 50};
+      var resolution = {num_layers: 10, num_points: 50};
 
-      var hoff = 0;
+      var h_offset = 0;
 
-      var ptlist = range(resolution.y).
-        map( yi => {
-          hoff += rand(yoff / 100)
-          return range(resolution.x).map( xi => {
-            var x = (xi / resolution.x - 0.5) * Math.PI;
-            var y = Math.cos(x) * Noise.noise(x + 10, yi * 0.15, seed);
-            var p = 1 - yi / resolution.y;
-            return [(x / Math.PI) * w * p, -y * h * p + hoff]
-          })
+      var layers = range(resolution.num_layers).map( layer_idx => {
+        h_offset += rand(y_offset / 100)
+        var expansion = 1 - layer_idx / resolution.num_layers;
+
+        return range(resolution.num_points).map( point_idx => {
+          var tilt = (point_idx / resolution.num_points - 0.5) * Math.PI;
+          var y = Math.cos(tilt) * Noise.noise(tilt + 10, layer_idx * 0.15, seed);
+          return [(tilt / Math.PI) * width * expansion, -y * height * expansion + h_offset]
         })
+      })
 
       function vegetate(treeFunc, growthRule, proofRule) {
-        canv += ptlist.
-                flatMap( (points, xi) => points.filter( (point, yi) => growthRule(xi, yi) ) ).
+        canv += layers.
+                flatMap( (layer, l_idx) => layer.filter( (point, p_idx) => growthRule(l_idx, p_idx) ) ).
                 and_then( veglist => veglist.filter( (_, i) => proofRule(veglist, i) ) ).
                 map( ([x, y]) => treeFunc(x, y) ).
                 join()
@@ -1916,7 +1916,7 @@
       //RIM
       vegetate(
         function(x, y) {
-          return Tree.tree02(x + xoff, y + yoff - 5, {
+          return Tree.tree02(x + x_offset, y + y_offset - 5, {
             color: rgba(100,100,100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5),
             clu: 2,
           });
@@ -1924,7 +1924,7 @@
         function(i, j) {
           var ns = Noise.noise(j * 0.1, seed);
           return (
-            i == 0 && ns * ns * ns < 0.1 && Math.abs(ptlist[i][j][1]) / h > 0.2
+            i == 0 && ns * ns * ns < 0.1 && Math.abs(layers[i][j][1]) / height > 0.2
           );
         },
         function(veglist, i) {
@@ -1933,24 +1933,16 @@
       );
 
       //WHITE BG
-      canv += poly(ptlist[0].concat([[0, resolution.y * 4]]), {
-        xof: xoff,
-        yof: yoff,
-        fil: "white",
-        str: "none",
-      });
+      canv += poly_([...layers.first, [0, resolution.num_layers * 4]],
+                    { x_offset, y_offset, fill: "white", stroke: "none" });
       //OUTLINE
-      canv += stroke(
-        ptlist[0].map(function(x) {
-          return [x[0] + xoff, x[1] + yoff];
-        }),
-        { col: "rgba(100,100,100,0.3)", noi: 1, wid: 3 },
-      );
+      canv += stroke_(layers.first,
+                      { x_offset, y_offset, color: rgba(100,100,100,0.3), noise: 1, width: 3 });
 
-      canv += foot(ptlist, { xof: xoff, yof: yoff });
-      canv += texture(ptlist, {
-        xof: xoff,
-        yof: yoff,
+      canv += foot(layers, { xof: x_offset, yof: y_offset });
+      canv += texture(layers, {
+        xof: x_offset,
+        yof: y_offset,
         tex: tex,
         sha: randChoice([0, 0, 0, 0, 5]),
         col: color,
@@ -1959,13 +1951,13 @@
       //TOP
       vegetate(
         function(x, y) {
-          return Tree.tree02(x + xoff, y + yoff, {
+          return Tree.tree02(x + x_offset, y + y_offset, {
             color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5),
           });
         },
         function(i, j) {
           var ns = Noise.noise(i * 0.1, j * 0.1, seed + 2);
-          return ns * ns * ns < 0.1 && Math.abs(ptlist[i][j][1]) / h > 0.5;
+          return ns * ns * ns < 0.1 && Math.abs(layers[i][j][1]) / height > 0.5;
         },
         function(veglist, i) {
           return true;
@@ -1976,9 +1968,9 @@
         //MIDDLE
         vegetate(
           function(x, y) {
-            var ht = ((h + y) / h) * 70;
+            var ht = ((height + y) / height) * 70;
             ht = ht * 0.3 + Math.random() * ht * 0.7;
-            return Tree.tree01(x + xoff, y + yoff, {
+            return Tree.tree01(x + x_offset, y + y_offset, {
               height: ht,
               width: Math.random() * 3 + 1,
               color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3),
@@ -1989,7 +1981,7 @@
             return (
               j % 2 &&
               ns * ns * ns * ns < 0.012 &&
-              Math.abs(ptlist[i][j][1]) / h < 0.3
+              Math.abs(layers[i][j][1]) / height < 0.3
             );
           },
           function(veglist, i) {
@@ -2014,11 +2006,11 @@
         //BOTTOM
         vegetate(
           function(x, y) {
-            var ht = ((h + y) / h) * 120;
+            var ht = ((height + y) / height) * 120;
             ht = ht * 0.5 + Math.random() * ht * 0.5;
             var bc = Math.random() * 0.1;
             var bp = 1;
-            return Tree.tree03(x + xoff, y + yoff, {
+            return Tree.tree03(x + x_offset, y + y_offset, {
               height: ht,
               bending: (x) => Math.pow(x * bc, bp),
               color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3),
@@ -2027,7 +2019,7 @@
           function(i, j) {
             var ns = Noise.noise(i * 0.2, j * 0.05, seed);
             return (
-              (j == 0 || j == ptlist[i].length - 1) && ns * ns * ns * ns < 0.012
+              (j == 0 || j == layers[i].length - 1) && ns * ns * ns * ns < 0.012
             );
           },
           function(veglist, i) {
@@ -2041,14 +2033,14 @@
         function(x, y) {
           var tt = randChoice([0, 0, 1, 1, 1, 2]);
           if (tt == 1) {
-            return Arch.arch02(x + xoff, y + yoff, seed, {
+            return Arch.arch02(x + x_offset, y + y_offset, seed, {
               width: normRand(40, 70),
               stories: randChoice([1, 2, 2, 3]),
               rotation: Math.random(),
               style: randChoice(['t_shapes', 'fence', 'grid']),
             });
           } else if (tt == 2) {
-            return Arch.arch04(x + xoff, y + yoff, seed, {
+            return Arch.arch04(x + x_offset, y + y_offset, seed, {
               sto: randChoice([1, 1, 1, 2, 2]),
             });
           } else {
@@ -2059,7 +2051,7 @@
           var ns = Noise.noise(i * 0.2, j * 0.05, seed + 10);
           return (
             i != 0 &&
-            (j == 1 || j == ptlist[i].length - 2) &&
+            (j == 1 || j == layers[i].length - 2) &&
             ns * ns * ns * ns < 0.008
           );
         },
@@ -2070,7 +2062,7 @@
       //TOP ARCH
       vegetate(
         function(x, y) {
-          return Arch.arch03(x + xoff, y + yoff, seed, {
+          return Arch.arch03(x + x_offset, y + y_offset, seed, {
             sto: randChoice([5, 7]),
             wid: 40 + Math.random() * 20,
           });
@@ -2078,7 +2070,7 @@
         function(i, j) {
           return (
             i == 1 &&
-            Math.abs(j - ptlist[i].length / 2) < 1 &&
+            Math.abs(j - layers[i].length / 2) < 1 &&
             Math.random() < 0.02
           );
         },
@@ -2090,13 +2082,13 @@
       //TRANSM
       vegetate(
         function(x, y) {
-          return Arch.transmissionTower01(x + xoff, y + yoff, seed);
+          return Arch.transmissionTower01(x + x_offset, y + y_offset, seed);
         },
         function(i, j) {
           var ns = Noise.noise(i * 0.2, j * 0.05, seed + 20 * Math.PI);
           return (
             i % 2 == 0 &&
-            (j == 1 || j == ptlist[i].length - 2) &&
+            (j == 1 || j == layers[i].length - 2) &&
             ns * ns * ns * ns < 0.002
           );
         },
@@ -2108,14 +2100,14 @@
       //BOTT ROCK
       vegetate(
         function(x, y) {
-          return Mount.rock(x + xoff, y + yoff, seed, {
+          return Mount.rock(x + x_offset, y + y_offset, seed, {
             wid: 20 + Math.random() * 20,
             hei: 20 + Math.random() * 20,
             sha: 2,
           });
         },
         function(i, j) {
-          return (j == 0 || j == ptlist[i].length - 1) && Math.random() < 0.1;
+          return (j == 0 || j == layers[i].length - 1) && Math.random() < 0.1;
         },
         function(veglist, i) {
           return true;
@@ -2125,7 +2117,7 @@
       if (ret == 0) {
         return canv;
       } else {
-        return [ptlist];
+        return [layers];
       }
     };
 
