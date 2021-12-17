@@ -520,7 +520,7 @@
 </script>
 
 <script id="zverok-utils">
-  var chance = (probability, action) => Math.random() < probability ? action() : undefined
+  var chance = (probability, action = () => true) => Math.random() < probability ? action() : undefined
   var if_ = (condition, action) => condition ? action() : undefined
 
   Array.prototype.eachCons = function(size) {
@@ -1885,6 +1885,7 @@
     };
 
     Object.defineProperty(Array.prototype, 'first', {get: function() { return this[0] }})
+    Array.prototype.countIf = function(fun) { return this.filter(fun).length }
 
     this.mountain = function(x_offset, y_offset, seed = 0,
       {height = rand(100, 500), width = rand(400, 600), tex = 200, veg = true, ret = 0, color}
@@ -1906,30 +1907,24 @@
         })
       })
 
-      function vegetate(treeFunc, growthRule, proofRule) {
+      function generate(objectFunc, {if: pointSelector, pointFilter = points => points}) {
         canv += layers.
-                flatMap( (layer, l_idx) => layer.filter( (point, p_idx) => growthRule(l_idx, p_idx) ) ).
-                and_then( veglist => veglist.filter( (_, i) => proofRule(veglist, i) ) ).
-                map( ([x, y]) => treeFunc(x, y) ).
+                flatMap( (layer, layerIdx) =>
+                  layer.filter( (point, pointIdx) => pointSelector(layerIdx, pointIdx, {layer, point}) )
+                ).
+                and_then(pointFilter).
+                map( ([x, y]) => objectFunc(x, y) ).
                 join()
       }
       //RIM
-      vegetate(
-        function(x, y) {
-          return Tree.tree02(x + x_offset, y + y_offset - 5, {
-            color: rgba(100,100,100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5),
-            clu: 2,
-          });
-        },
-        function(i, j) {
-          var ns = Noise.noise(j * 0.1, seed);
-          return (
-            i == 0 && ns * ns * ns < 0.1 && Math.abs(layers[i][j][1]) / height > 0.2
-          );
-        },
-        function(veglist, i) {
-          return true;
-        },
+      generate(
+        (x, y) => Tree.tree02(x + x_offset, y + y_offset - 5, {
+          color: rgba(100,100,100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5),
+          clu: 2,
+        }),
+        {if: (layerIdx, pointIdx, {point}) => layerIdx == 0 &&
+                                            Noise.noise(pointIdx * 0.1, seed)**3 < 0.1 &&
+                                            Math.abs(point[1]) / height > 0.2},
       );
 
       //WHITE BG
@@ -1949,66 +1944,40 @@
       });
 
       //TOP
-      vegetate(
-        function(x, y) {
-          return Tree.tree02(x + x_offset, y + y_offset, {
-            color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5),
-          });
-        },
-        function(i, j) {
-          var ns = Noise.noise(i * 0.1, j * 0.1, seed + 2);
-          return ns * ns * ns < 0.1 && Math.abs(layers[i][j][1]) / height > 0.5;
-        },
-        function(veglist, i) {
-          return true;
-        },
+      generate(
+        (x, y) => Tree.tree02(x + x_offset, y + y_offset, {
+          color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5),
+        }),
+        {if: (layerIdx, pointIdx, {point}) => Noise.noise(layerIdx * 0.1, pointIdx * 0.1, seed + 2)**3 < 0.1 &&
+                                            Math.abs(point[1]) / height > 0.5},
       );
 
       if (veg) {
         //MIDDLE
-        vegetate(
-          function(x, y) {
+        generate(
+          (x, y) => {
             var ht = ((height + y) / height) * 70;
-            ht = ht * 0.3 + Math.random() * ht * 0.7;
+            ht = ht * 0.3 + rand(ht * 0.7)
             return Tree.tree01(x + x_offset, y + y_offset, {
               height: ht,
-              width: Math.random() * 3 + 1,
+              width: rand(3) + 1,
               color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3),
             });
           },
-          function(i, j) {
-            var ns = Noise.noise(i * 0.2, j * 0.05, seed);
-            return (
-              j % 2 &&
-              ns * ns * ns * ns < 0.012 &&
-              Math.abs(layers[i][j][1]) / height < 0.3
-            );
-          },
-          function(veglist, i) {
-            var counter = 0;
-            for (var j = 0; j < veglist.length; j++) {
-              if (
-                i != j &&
-                Math.pow(veglist[i][0] - veglist[j][0], 2) +
-                  Math.pow(veglist[i][1] - veglist[j][1], 2) <
-                  30 * 30
-              ) {
-                counter++;
-              }
-              if (counter > 2) {
-                return true;
-              }
-            }
-            return false;
-          },
+          {if: (layerIdx, pointIdx, {point}) => pointIdx % 2 &&
+                                              Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed)**4 < 0.012 &&
+                                              Math.abs(point[1]) / height < 0.3,
+          pointFilter: points => points.filter( ([x, y], i) =>
+            points.countIf(([ox, oy], oi) => oi != i && Math.sqrt((x - ox)**2 + (y - oy)**2) < 30) > 2
+          )},
         );
 
         //BOTTOM
-        vegetate(
-          function(x, y) {
+        generate(
+          (x, y) => {
             var ht = ((height + y) / height) * 120;
-            ht = ht * 0.5 + Math.random() * ht * 0.5;
-            var bc = Math.random() * 0.1;
+            ht = ht * 0.5 + rand(ht * 0.5);
+            var bc = rand(0.1)
             var bp = 1;
             return Tree.tree03(x + x_offset, y + y_offset, {
               height: ht,
@@ -2016,20 +1985,13 @@
               color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3),
             });
           },
-          function(i, j) {
-            var ns = Noise.noise(i * 0.2, j * 0.05, seed);
-            return (
-              (j == 0 || j == layers[i].length - 1) && ns * ns * ns * ns < 0.012
-            );
-          },
-          function(veglist, i) {
-            return true;
-          },
+          {if: (layerIdx, pointIdx, {layer}) => (pointIdx == 0 || pointIdx == layer.length - 1) &&
+                                       Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed)**4 < 0.012},
         );
       }
 
       //BOTT ARCH
-      vegetate(
+      generate(
         function(x, y) {
           var tt = randChoice([0, 0, 1, 1, 1, 2]);
           if (tt == 1) {
@@ -2047,71 +2009,38 @@
             return "";
           }
         },
-        function(i, j) {
-          var ns = Noise.noise(i * 0.2, j * 0.05, seed + 10);
-          return (
-            i != 0 &&
-            (j == 1 || j == layers[i].length - 2) &&
-            ns * ns * ns * ns < 0.008
-          );
-        },
-        function(veglist, i) {
-          return true;
-        },
+        {if: (layerIdx, pointIdx, {layer}) => layerIdx != 0 &&
+                                     (pointIdx == 1 || pointIdx == layer.length - 2) &&
+                                     Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed + 10)**4 < 0.008},
       );
       //TOP ARCH
-      vegetate(
-        function(x, y) {
-          return Arch.arch03(x + x_offset, y + y_offset, seed, {
-            sto: randChoice([5, 7]),
-            wid: 40 + Math.random() * 20,
-          });
-        },
-        function(i, j) {
-          return (
-            i == 1 &&
-            Math.abs(j - layers[i].length / 2) < 1 &&
-            Math.random() < 0.02
-          );
-        },
-        function(veglist, i) {
-          return true;
-        },
+      generate(
+        (x, y) => Arch.arch03(x + x_offset, y + y_offset, seed, {
+          sto: randChoice([5, 7]),
+          wid: 40 + Math.random() * 20,
+        }),
+        {if: (layerIdx, pointIdx, {layer}) => layerIdx == 1 &&
+                                     Math.abs(pointIdx - layer.length / 2) < 1 &&
+                                     Math.random() < 0.02},
       );
 
       //TRANSM
-      vegetate(
-        function(x, y) {
-          return Arch.transmissionTower01(x + x_offset, y + y_offset, seed);
-        },
-        function(i, j) {
-          var ns = Noise.noise(i * 0.2, j * 0.05, seed + 20 * Math.PI);
-          return (
-            i % 2 == 0 &&
-            (j == 1 || j == layers[i].length - 2) &&
-            ns * ns * ns * ns < 0.002
-          );
-        },
-        function(veglist, i) {
-          return true;
-        },
+      generate(
+        (x, y) => Arch.transmissionTower01(x + x_offset, y + y_offset, seed),
+        {if: (layerIdx, pointIdx, {layer}) => layerIdx % 2 == 0 &&
+                                     (pointIdx == 1 || pointIdx == layer.length - 2) &&
+                                     Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed + 20 * Math.PI)**4 < 0.002},
       );
 
       //BOTT ROCK
-      vegetate(
-        function(x, y) {
-          return Mount.rock(x + x_offset, y + y_offset, seed, {
-            wid: 20 + Math.random() * 20,
-            hei: 20 + Math.random() * 20,
+      generate(
+        (x, y) => Mount.rock(x + x_offset, y + y_offset, seed, {
+            wid: 20 + rand(20),
+            hei: 20 + rand(20),
             sha: 2,
-          });
-        },
-        function(i, j) {
-          return (j == 0 || j == layers[i].length - 1) && Math.random() < 0.1;
-        },
-        function(veglist, i) {
-          return true;
-        },
+          }),
+        {if: (layerIdx, pointIdx, {layer}) => (pointIdx == 0 || pointIdx == layer.length - 1) &&
+                                     Math.random() < 0.1},
       );
 
       if (ret == 0) {
