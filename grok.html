@@ -1888,7 +1888,7 @@
     Array.prototype.countIf = function(fun) { return this.filter(fun).length }
 
     this.mountain = function(x_offset, y_offset, seed = 0,
-      {height = rand(100, 500), width = rand(400, 600), tex = 200, veg = true, ret = 0, color}
+      {height = rand(100, 500), width = rand(400, 600), tex = 200, withTrees = true, color}
     ) {
       var canv = "";
 
@@ -1916,15 +1916,14 @@
                 map( ([x, y]) => objectFunc(x, y) ).
                 join()
       }
+
+      var treeColor = (x, y, shift = 0.3) => rgba(100,100,100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + shift)
+
       //RIM
       generate(
-        (x, y) => Tree.tree02(x + x_offset, y + y_offset - 5, {
-          color: rgba(100,100,100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5),
-          clu: 2,
-        }),
-        {if: (layerIdx, pointIdx, {point}) => layerIdx == 0 &&
-                                            Noise.noise(pointIdx * 0.1, seed)**3 < 0.1 &&
-                                            Math.abs(point[1]) / height > 0.2},
+        (x, y) => Tree.tree02(x + x_offset, y + y_offset - 5, {color: treeColor(x, y, 0.5), clu: 2}),
+        {if: (layerIdx, pointIdx, {point: [_, y]}) =>
+              layerIdx == 0 && Noise.noise(pointIdx * 0.1, seed)**3 < 0.1 && Math.abs(y) / height > 0.2},
       );
 
       //WHITE BG
@@ -1945,83 +1944,73 @@
 
       //TOP
       generate(
-        (x, y) => Tree.tree02(x + x_offset, y + y_offset, {
-          color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.5),
-        }),
-        {if: (layerIdx, pointIdx, {point}) => Noise.noise(layerIdx * 0.1, pointIdx * 0.1, seed + 2)**3 < 0.1 &&
-                                            Math.abs(point[1]) / height > 0.5},
+        (x, y) => Tree.tree02(x + x_offset, y + y_offset, { color: treeColor(x, y, 0.5) }),
+        {if: (layerIdx, pointIdx, {point: [_, y]}) =>
+             Noise.noise(layerIdx * 0.1, pointIdx * 0.1, seed + 2)**3 < 0.1 && Math.abs(y) / height > 0.5},
       );
 
-      if (veg) {
+      if (withTrees) {
         //MIDDLE
         generate(
-          (x, y) => {
-            var ht = ((height + y) / height) * 70;
-            ht = ht * 0.3 + rand(ht * 0.7)
-            return Tree.tree01(x + x_offset, y + y_offset, {
-              height: ht,
-              width: rand(3) + 1,
-              color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3),
-            });
-          },
-          {if: (layerIdx, pointIdx, {point}) => pointIdx % 2 &&
-                                              Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed)**4 < 0.012 &&
-                                              Math.abs(point[1]) / height < 0.3,
-          pointFilter: points => points.filter( ([x, y], i) =>
-            points.countIf(([ox, oy], oi) => oi != i && Math.sqrt((x - ox)**2 + (y - oy)**2) < 30) > 2
-          )},
+          (x, y) => Tree.tree01(x + x_offset, y + y_offset, {
+            height: ((height + y) / height) * 70 * rand(0.3, 1.0),
+            width: rand(1, 4),
+            color: treeColor(x, y),
+          }),
+          {if: (layerIdx, pointIdx, {point: [_, y]}) =>
+                pointIdx % 2 &&
+                Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed)**4 < 0.012 &&
+                Math.abs(y) / height < 0.3,
+          pointFilter: points =>
+                       points.filter( ([x, y], i) =>
+                         points.countIf(([ox, oy], oi) => oi != i && Math.sqrt((x - ox)**2 + (y - oy)**2) < 30) > 2
+                       )},
         );
 
         //BOTTOM
         generate(
           (x, y) => {
-            var ht = ((height + y) / height) * 120;
-            ht = ht * 0.5 + rand(ht * 0.5);
+            var ht = ((height + y) / height) * 120 * rand(0.5, 1.0);
             var bc = rand(0.1)
             var bp = 1;
             return Tree.tree03(x + x_offset, y + y_offset, {
               height: ht,
               bending: (x) => Math.pow(x * bc, bp),
-              color: rgba(100, 100, 100, Noise.noise(0.01 * x, 0.01 * y) * 0.5 * 0.3 + 0.3),
+              color: treeColor(x, y),
             });
           },
-          {if: (layerIdx, pointIdx, {layer}) => (pointIdx == 0 || pointIdx == layer.length - 1) &&
-                                       Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed)**4 < 0.012},
+          {if: (layerIdx, pointIdx, {layer}) =>
+               (pointIdx == 0 || pointIdx == layer.length - 1) &&
+               Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed)**4 < 0.012},
         );
       }
 
       //BOTT ARCH
       generate(
-        function(x, y) {
-          var tt = randChoice([0, 0, 1, 1, 1, 2]);
-          if (tt == 1) {
+        (x, y) => {
+          switch(randChoice([0, 0, 1, 1, 1, 2])) {
+          case 1:
             return Arch.arch02(x + x_offset, y + y_offset, seed, {
               width: normRand(40, 70),
               stories: randChoice([1, 2, 2, 3]),
               rotation: Math.random(),
               style: randChoice(['t_shapes', 'fence', 'grid']),
             });
-          } else if (tt == 2) {
-            return Arch.arch04(x + x_offset, y + y_offset, seed, {
-              sto: randChoice([1, 1, 1, 2, 2]),
-            });
-          } else {
+          case 2:
+            return Arch.arch04(x + x_offset, y + y_offset, seed, {sto: randChoice([1, 1, 1, 2, 2])});
+          default:
             return "";
           }
         },
-        {if: (layerIdx, pointIdx, {layer}) => layerIdx != 0 &&
-                                     (pointIdx == 1 || pointIdx == layer.length - 2) &&
-                                     Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed + 10)**4 < 0.008},
+        {if: (layerIdx, pointIdx, {layer}) =>
+             layerIdx != 0 && (pointIdx == 1 || pointIdx == layer.length - 2) &&
+             Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed + 10)**4 < 0.008},
       );
       //TOP ARCH
       generate(
-        (x, y) => Arch.arch03(x + x_offset, y + y_offset, seed, {
-          sto: randChoice([5, 7]),
-          wid: 40 + Math.random() * 20,
-        }),
-        {if: (layerIdx, pointIdx, {layer}) => layerIdx == 1 &&
-                                     Math.abs(pointIdx - layer.length / 2) < 1 &&
-                                     Math.random() < 0.02},
+        (x, y) => Arch.arch03(x + x_offset, y + y_offset, seed, {sto: randChoice([5, 7]), wid: rand(40, 60)}),
+        {if: (layerIdx, pointIdx, {layer}) =>
+             layerIdx == 1 && Math.abs(pointIdx - layer.length / 2) < 1 && chance(0.02)},
       );
 
       //TRANSM
@@ -2034,20 +2023,11 @@
 
       //BOTT ROCK
       generate(
-        (x, y) => Mount.rock(x + x_offset, y + y_offset, seed, {
-            wid: 20 + rand(20),
-            hei: 20 + rand(20),
-            sha: 2,
-          }),
-        {if: (layerIdx, pointIdx, {layer}) => (pointIdx == 0 || pointIdx == layer.length - 1) &&
-                                     Math.random() < 0.1},
+        (x, y) => Mount.rock(x + x_offset, y + y_offset, seed, {wid: rand(20, 40), hei: rand(20, 40), sha: 2}),
+        {if: (layerIdx, pointIdx, {layer}) => (pointIdx == 0 || pointIdx == layer.length - 1) && chance(0.1)},
       );
 
-      if (ret == 0) {
-        return canv;
-      } else {
-        return [layers];
-      }
+      return canv;
     };
 
     this.flatMount = function(xoff, yoff, seed, args) {
