@@ -1910,7 +1910,7 @@
       function generate(objectFunc, {if: pointSelector, pointFilter = points => points}) {
         canv += layers.
                 flatMap( (layer, layerIdx) =>
-                  layer.filter( (point, pointIdx) => pointSelector(layerIdx, pointIdx, {layer, point}) )
+                  layer.filter( (point, pointIdx) => pointSelector(layerIdx, pointIdx, {point}) )
                 ).
                 and_then(pointFilter).
                 map( ([x, y]) => objectFunc(x, y) ).
@@ -1921,8 +1921,8 @@
 
       //RIM
       generate(
-        (x, y) => Tree.tree02(x + x_offset, y + y_offset - 5, {color: treeColor(x, y, 0.5), clu: 2}),
-        {if: (layerIdx, pointIdx, {point: [_, y]}) =>
+        (x, y) => Tree.tree02(x + x_offset, y + y_offset - 5, { color: treeColor(x, y, 0.5), clu: 2 }),
+        {if: (layerIdx, pointIdx, { point: [_, y] }) =>
               layerIdx == 0 && Noise.noise(pointIdx * 0.1, seed)**3 < 0.1 && Math.abs(y) / height > 0.2},
       );
 
@@ -1934,13 +1934,8 @@
                       { x_offset, y_offset, color: rgba(100,100,100,0.3), noise: 1, width: 3 });
 
       canv += foot(layers, { xof: x_offset, yof: y_offset });
-      canv += texture(layers, {
-        xof: x_offset,
-        yof: y_offset,
-        tex: tex,
-        sha: randChoice([0, 0, 0, 0, 5]),
-        col: color,
-      });
+      canv += texture(layers,
+                      {xof: x_offset, yof: y_offset, tex: tex, sha: randChoice([0, 0, 0, 0, 5]), col: color});
 
       //TOP
       generate(
@@ -1970,17 +1965,16 @@
         //BOTTOM
         generate(
           (x, y) => {
-            var ht = ((height + y) / height) * 120 * rand(0.5, 1.0);
-            var bc = rand(0.1)
-            var bp = 1;
+            var tree_height = ((height + y) / height) * 120 * rand(0.5, 1.0)
+            var bending_coef = rand(0.1)
             return Tree.tree03(x + x_offset, y + y_offset, {
-              height: ht,
-              bending: (x) => Math.pow(x * bc, bp),
+              height: tree_height,
+              bending: (x) => x * bending_coef,
               color: treeColor(x, y),
             });
           },
-          {if: (layerIdx, pointIdx, {layer}) =>
-               (pointIdx == 0 || pointIdx == layer.length - 1) &&
+          {if: (layerIdx, pointIdx) =>
+               (pointIdx == 0 || pointIdx == resolution.num_points - 1) &&
                Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed)**4 < 0.012},
         );
       }
@@ -1991,7 +1985,7 @@
           switch(randChoice([0, 0, 1, 1, 1, 2])) {
           case 1:
             return Arch.arch02(x + x_offset, y + y_offset, seed, {
-              width: normRand(40, 70),
+              width: rand(40, 70),
               stories: randChoice([1, 2, 2, 3]),
               rotation: Math.random(),
               style: randChoice(['t_shapes', 'fence', 'grid']),
@@ -2002,29 +1996,28 @@
             return "";
           }
         },
-        {if: (layerIdx, pointIdx, {layer}) =>
-             layerIdx != 0 && (pointIdx == 1 || pointIdx == layer.length - 2) &&
-             Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed + 10)**4 < 0.008},
+        {if: (layerIdx, pointIdx) => layerIdx != 0 && (pointIdx == 1 || pointIdx == resolution.num_points - 2) &&
+                                     Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed + 10)**4 < 0.008},
       );
       //TOP ARCH
       generate(
         (x, y) => Arch.arch03(x + x_offset, y + y_offset, seed, {sto: randChoice([5, 7]), wid: rand(40, 60)}),
-        {if: (layerIdx, pointIdx, {layer}) =>
-             layerIdx == 1 && Math.abs(pointIdx - layer.length / 2) < 1 && chance(0.02)},
+        {if: (layerIdx, pointIdx) =>
+             layerIdx == 1 && pointIdx == resolution.num_points / 2 && chance(0.02)},
       );
 
       //TRANSM
       generate(
         (x, y) => Arch.transmissionTower01(x + x_offset, y + y_offset, seed),
-        {if: (layerIdx, pointIdx, {layer}) => layerIdx % 2 == 0 &&
-                                     (pointIdx == 1 || pointIdx == layer.length - 2) &&
+        {if: (layerIdx, pointIdx) => layerIdx % 2 == 0 &&
+                                     (pointIdx == 1 || pointIdx == resolution.num_points - 2) &&
                                      Noise.noise(layerIdx * 0.2, pointIdx * 0.05, seed + 20 * Math.PI)**4 < 0.002},
       );
 
       //BOTT ROCK
       generate(
         (x, y) => Mount.rock(x + x_offset, y + y_offset, seed, {wid: rand(20, 40), hei: rand(20, 40), sha: 2}),
-        {if: (layerIdx, pointIdx, {layer}) => (pointIdx == 0 || pointIdx == layer.length - 1) && chance(0.1)},
+        {if: (layerIdx, pointIdx) => (pointIdx == 0 || pointIdx == resolution.num_points - 1) && chance(0.1)},
       );
 
       return canv;
