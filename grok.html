@@ -523,12 +523,21 @@
   var chance = (probability, action = () => true) => Math.random() < probability ? action() : undefined
   var if_ = (condition, action) => condition ? action() : undefined
 
+  Object.defineProperty(Array.prototype, 'first', {get: function() { return this[0] }})
+  Object.defineProperty(Array.prototype, 'last', {get: function() { return this[this.length - 1] }})
+
+  Array.prototype.countIf = function(fun) { return this.filter(fun).length }
+
   Array.prototype.eachCons = function(size) {
     var others = range(size).map(i => this.slice(i)).slice(1)
     return this.slice(null, this.length - size + 1).zip(...others)
   }
 
-  Array.prototype.last = function() { return this[this.length - 1] }
+  Array.prototype.zip = function(...others) {
+    return this.map((el, i) => [el, ...others.map(o => o[i])]);
+  }
+
+  Array.prototype.sample = function() { return this[Math.floor(rand(this.length))] }
 
 </script>
 <script>
@@ -626,11 +635,11 @@
     )
 
     return [
-      points[0],
+      points.first,
       ...vertexes_top,
-      points.last(),
+      points.last,
       ...vertexes_bottom.reverse(),
-      points[0]
+      points.first
     ].
       map(([x, y]) => [x + x_offset, y + y_offset]).
       and_then( vertexes => poly_(vertexes, {fill: color, stroke: color, width: outline}))
@@ -759,7 +768,7 @@
       range(num_of_midpoints).map(
         i => [x1 + (x2 - x1) / num_of_midpoints * i, y1 + (y2 - y1) / num_of_midpoints * i]
       )
-    ).concat([points.last()])
+    ).concat([points.last])
   }
 
   var texture = function(ptlist, args) {
@@ -869,10 +878,6 @@
     return res;
   }
 
-  Array.prototype.zip = function(...others) {
-    return this.map((el, i) => [el, ...others.map(o => o[i])]);
-  }
-
   class RGBA {
     constructor(r, g, b, a) {
       this.r = r
@@ -952,8 +957,6 @@
         },
       )).join();
     };
-
-    Array.prototype.sample = function() { return this[Math.floor(rand(this.length))] }
 
     this.tree03 = function(x, y, {height = 50, width = 5, bending = (x)=>0, color = rgba(100,100,100,0.5), noise = 0.5}) {
 
@@ -1883,9 +1886,6 @@
       }
       return ret ? ftlist : canv;
     };
-
-    Object.defineProperty(Array.prototype, 'first', {get: function() { return this[0] }})
-    Array.prototype.countIf = function(fun) { return this.filter(fun).length }
 
     this.mountain = function(x_offset, y_offset, seed = 0,
       {height = rand(100, 500), width = rand(400, 600), tex = 200, color}
@@ -3829,8 +3829,8 @@
 
     var x_range = range(xmin, xmax, xstep)
 
-    MEM.occupied_x ||= new MountainMap(xstep)
-    MEM.occupied_x.initRange(xmin, xmax)
+    STATE.occupiedXs ||= new MountainMap(xstep)
+    STATE.occupiedXs.initRange(xmin, xmax)
 
     x_range.forEach( x => {
       var max_y = Noise.noise(x * 0.01, Math.PI) * 480
@@ -3841,7 +3841,7 @@
           var x_offset = x + rand(-500, 500);
           var y_offset = y + 300;
           if (registry.pushChunk({ tag: "mount", x: x_offset, y: y_offset, h: noise(x, y) })) {
-            MEM.occupied_x.incRange(x_offset - mountain_width, x_offset + mountain_width)
+            STATE.occupiedXs.incRange(x_offset - mountain_width, x_offset + mountain_width)
           }
         })
 
@@ -3856,7 +3856,7 @@
     })
 
     x_range.
-      filter( x => MEM.occupied_x.isEmpty(x) ).
+      filter( x => STATE.occupiedXs.isEmpty(x) ).
       forEach( x => chance(0.01, () => {
           for (var y = 0; y < rand(4); y++) {
             registry.pushChunk({
@@ -3876,27 +3876,41 @@
     return registry;
   }
 
-  MEM = {
-    canv: "",
+  CONFIG = {
+    chunkWidth: 512,
+    windowWidth: 3000,
+    windowHeight: 800,
+  }
+
+  STATE = {
     chunks: [],
-    xmin: 0,
-    xmax: 0,
-    cwid: 512,
-    cursx: 0,
-    lasttick: 0,
-    windx: 3000,
-    windy: 800,
-    occupied_x: null,
+
+    xmin: 0, // minimum x current STATE.canvas is drawn starting from (can be negative)
+    xmax: 0, // maximum x current STATE.canvas is drawn to
+
+    cursorX: 0, // start of currently visible part of the picture
+
+    occupiedXs: null, // global list of x columns already having some mountains, initialized in mountplanner
+  };
+
+  STATE.chunks.put = function(newChunk) {
+    if (this.length == 0 || newChunk.y >= this.last.y) { this.push(newChunk) }
+    else if (newChunk.y <= this.first.y)               { this.unshift(newChunk)}
+    else {
+      this.eachCons(2).
+           findIndex( ([chunk1, chunk2], i) => newChunk.y >= chunk1.y && newChunk.y <= chunk2.y ).
+           and_then( idx => this.splice(idx + 1, 0, newChunk) )
+    }
   };
 
   function dummyloader(xmin, xmax) {
     for (var i = xmin; i < xmax; i += 200) {
-      //MEM.chunks.push({tag:"?",x:i,y:100,canv:Tree.tree08(i,500,i)})
-      //MEM.chunks.push({tag:"?",x:i,y:100,canv:Man.man(i,500)})
-      //MEM.chunks.push({tag:"?",x:i,y:100,canv:Arch.arch01(i,500)})
-      //MEM.chunks.push({tag:"?",x:i,y:100,canv:Arch.boat01(i,500)})
-      //MEM.chunks.push({tag:"?",x:i,y:100,canv:Arch.transmissionTower01(i,500)})
-      MEM.chunks.push({
+      //STATE.chunks.push({tag:"?",x:i,y:100,canv:Tree.tree08(i,500,i)})
+      //STATE.chunks.push({tag:"?",x:i,y:100,canv:Man.man(i,500)})
+      //STATE.chunks.push({tag:"?",x:i,y:100,canv:Arch.arch01(i,500)})
+      //STATE.chunks.push({tag:"?",x:i,y:100,canv:Arch.boat01(i,500)})
+      //STATE.chunks.push({tag:"?",x:i,y:100,canv:Arch.transmissionTower01(i,500)})
+      STATE.chunks.push({
         tag: "?",
         x: i,
         y: 100,
@@ -3906,48 +3920,36 @@
   }
 
   function chunkloader(xmin, xmax) {
-    var add = function(new_chunk) {
-      if (MEM.chunks.length == 0 || new_chunk.y >= MEM.chunks.last().y) {
-        MEM.chunks.push(new_chunk);
-      }
-      else if (new_chunk.y <= MEM.chunks[0].y) {
-        MEM.chunks.unshift(new_chunk);
-      } else {
-        MEM.chunks.eachCons(2).
-          findIndex( ([chunk1, chunk2], i) => new_chunk.y >= chunk1.y && new_chunk.y <= chunk2.y ).
-          and_then( idx => MEM.chunks.splice(idx + 1, 0, new_chunk) )
-      }
-    };
-
-    while (xmax > MEM.xmax - MEM.cwid || xmin < MEM.xmin + MEM.cwid) {
-      console.log("generating new chunk...");
-
+    while (xmax > STATE.xmax - CONFIG.chunkWidth || xmin < STATE.xmin + CONFIG.chunkWidth) {
       var plan;
-      if (xmax > MEM.xmax - MEM.cwid) {
-        plan = mountplanner(MEM.xmax, MEM.xmax + MEM.cwid);
-        MEM.xmax = MEM.xmax + MEM.cwid;
+      if (xmax > STATE.xmax - CONFIG.chunkWidth) {
+        plan = mountplanner(STATE.xmax, STATE.xmax + CONFIG.chunkWidth);
+        STATE.xmax += CONFIG.chunkWidth;
       } else {
-        plan = mountplanner(MEM.xmin - MEM.cwid, MEM.xmin);
-        MEM.xmin = MEM.xmin - MEM.cwid;
+        plan = mountplanner(STATE.xmin - CONFIG.chunkWidth, STATE.xmin);
+        STATE.xmin -= CONFIG.chunkWidth;
       }
 
       plan.forEach( ({tag, x, y}, i) => {
         switch(tag) {
-          case "mount":
-            add({tag, x, y,            canv: Mount.mountain(x, y, rand(i * 2), {})});
-            add({tag, x, y: y - 10000, canv: water(x, y, i * 2)});
-            break
+        case "mount":
+          STATE.chunks.put({tag, x, y,            canvas: Mount.mountain(x, y, rand(i * 2), {})});
+          STATE.chunks.put({tag, x, y: y - 10000, canvas: water(x, y, i * 2)});
+          break
         case "flatmount":
-          add({tag, x, y,
-            canv: Mount.flatMount(x, y, rand(2 * Math.PI), {wid: rand(600, 1000), hei: 100, cho: rand(0.5, 0.7)}),
+          STATE.chunks.put({tag, x, y,
+            canvas: Mount.flatMount(x, y, rand(2 * Math.PI), {wid: rand(600, 1000), hei: 100, cho: rand(0.5, 0.7)}),
           });
           break
         case "distmount":
-          add({tag, x, y,
-               canv: Mount.distMount(x, y, rand(100), {hei: 150, len: randChoice([500, 1000, 1500])})});
+          STATE.chunks.put({tag, x, y,
+             canvas: Mount.distMount(x, y, rand(100), {hei: 150, len: randChoice([500, 1000, 1500])})
+           });
           break
         case "boat":
-          add({tag, x, y, canv: Arch.boat01(x, y, Math.random(), {sca: y / 800, fli: randChoice([true, false])})});
+          STATE.chunks.put({tag, x, y,
+            canvas: Arch.boat01(x, y, Math.random(), {sca: y / 800, fli: randChoice([true, false])})
+          });
           break
         default:
           throw `weird tag: ${tag}`
@@ -3957,16 +3959,10 @@
   }
 
   function chunkrender(xmin, xmax) {
-    MEM.canv = "";
-
-    for (var i = 0; i < MEM.chunks.length; i++) {
-      if (
-        xmin - MEM.cwid < MEM.chunks[i].x &&
-        MEM.chunks[i].x < xmax + MEM.cwid
-      ) {
-        MEM.canv += MEM.chunks[i].canv;
-      }
-    }
+    return STATE.chunks
+           .filter( chunk => xmin - CONFIG.chunkWidth < chunk.x && chunk.x < xmax + CONFIG.chunkWidth )
+           .map( chunk => chunk.canvas )
+           .join()
   }
 
   document.addEventListener("mousemove", onMouseUpdate, false);
@@ -3980,7 +3976,7 @@
 
   function calcViewBox() {
     var zoom = 1.142;
-    return "" + MEM.cursx + " 0 " + MEM.windx / zoom + " " + MEM.windy / zoom;
+    return "" + STATE.cursorX + " 0 " + CONFIG.windowWidth / zoom + " " + CONFIG.windowHeight / zoom;
   }
 
   function viewupdate() {
@@ -3994,35 +3990,22 @@
 
   function needupdate() {
     return true;
-    if (MEM.xmin < MEM.cursx && MEM.cursx < MEM.xmax - MEM.windx) {
+    if (STATE.xmin < STATE.cursorX && STATE.cursorX < STATE.xmax - CONFIG.windowWidth) {
       return false;
     }
     return true;
   }
 
   function update() {
-    //console.log("update!")
-
-    self.chunkloader(MEM.cursx, MEM.cursx + MEM.windx);
-    self.chunkrender(MEM.cursx, MEM.cursx + MEM.windx);
+    self.chunkloader(STATE.cursorX, STATE.cursorX + CONFIG.windowWidth);
+    canvas = self.chunkrender(STATE.cursorX, STATE.cursorX + CONFIG.windowWidth);
 
     document.getElementById("BG").innerHTML =
-      "<svg id='SVG' xmlns='http://www.w3.org/2000/svg' width='" +
-      MEM.windx +
-      "' height='" +
-      MEM.windy +
-      "' style='mix-blend-mode:multiply;'" +
-      "viewBox = '" +
-      calcViewBox() +
-      "'" +
-      "><g id='G' transform='translate(" +
-      0 +
-      ",0)'>" +
-      MEM.canv +
-      //+ "<circle cx='0' cy='0' r='50' stroke='black' fill='red' />"
+      "<svg id='SVG' xmlns='http://www.w3.org/2000/svg' " +
+        `width='${CONFIG.windowWidth}' height='${CONFIG.windowHeight}' style='mix-blend-mode:multiply;'` +
+        `viewBox = '${calcViewBox()}'><g id='G' transform='translate(0, 0)'>` +
+        canvas +
       "</g></svg>";
-
-    //setTimeout(update,1000);
   }
 </script>
 
@@ -4043,7 +4026,7 @@
 
 <script id="UI">
   function xcroll(v) {
-    MEM.cursx += v;
+    STATE.cursorX += v;
     if (needupdate()) {
       update();
     } else {
@@ -4077,13 +4060,13 @@
           ");\
   " +
           "height:" +
-          MEM.windy +
+          CONFIG.windowHeight +
           "px"
       );
     document.getElementById(id + ".t").setAttribute(
       "style",
       "vertical-align:middle; display:table-cell"
-      //"position:absolute; top:"+(MEM.windy/2-20)+"px; left:"+(MEM.windx+20)+"px;"
+      //"position:absolute; top:"+(CONFIG.windowHeight/2-20)+"px; left:"+(CONFIG.windowWidth+20)+"px;"
     );
   }
   function toggleVisible(id) {
@@ -4288,11 +4271,10 @@
       <td>
         <div id="BG">
           <script>
-            MEM.lasttick = new Date().getTime();
             document.getElementById("INP_SEED").value = SEED;
             document
               .getElementById("BG")
-              .setAttribute("style", "width:" + MEM.windx + "px");
+              .setAttribute("style", "width:" + CONFIG.windowWidth + "px");
             update();
             document.body.scrollTo(0, 0);
             console.log(["SCROLLX", window.scrollX]);
