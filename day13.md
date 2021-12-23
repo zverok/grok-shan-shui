@@ -1,4 +1,10 @@
-## Day 13: Plan for the mountains
+# Day 13: Plan for the mountains
+
+* **Commit:** [297259f](https://github.com/zverok/grok-shan-shui/commit/297259f31e87fa6b7b7d449a6c34897db9c40040)
+* **Functions:**
+  * [`mountplanner`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L3706)
+* **Other days about:**
+  * `mountplanner`: **13**—[14](day14.md)
 
 So, let's crack that `mountplanner` thing!
 
@@ -75,7 +81,7 @@ function range(from, to = undefined, step = undefined) {
 }
 ```
 
-Funny note: here I am rather mimicking Python than Ruby (Ruby-idiomatic way to say "range with begin, end, and step" would be `(1...4).step(2)` or `(1...4) % 2`. This is much more work to reproduce—and without a dedicated range literal Ruby has, this will still be awkward.)
+> Funny note: here I am rather mimicking Python than Ruby (Ruby-idiomatic way to say "range with begin, end, and step" would be `(1...4).step(2)` or `(1...4) % 2`. This is much more work to reproduce—and without a dedicated range literal Ruby has, this will still be awkward.)
 
 There are a few more things to (slightly) clarify—more or less it looks ready-for-explanation now.
 
@@ -104,13 +110,13 @@ range(rand(4)).forEach( y => {
 })
 ```
 
-...the picture suddenly explodes.
+...the picture is suddenly screwed.
 
 Right:
 
 ![](image37.png)
 
-With cool range:
+With cool range (notice the background mountains shift, and foreground trees vanishing):
 
 ![](image38.png)
 

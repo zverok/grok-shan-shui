@@ -1,8 +1,16 @@
 # Day 07: Build me a house
 
+* **Commit:** [27e48fa](https://github.com/zverok/grok-shan-shui/commit/27e48fade1efa0bbcba3462366da66dd5bc7e424)
+* **Functions:**
+  * [`Arch.arch02`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L3061)
+  * [`box`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L2609)
+* **Other days about:**
+  * `arch02`: **07**, [11](day11.md)
+  * `box`: **07**—[08](day08.md)—[09](day09.md)—[10](day10.md)
+
 I opened the code planning to experiment on buildings in the picture (class `Arch`) the same way I experimented with trees.
 
-The first disappointment to wait for me was that buildings do not have `col`(or) parameter, so it is not that easy to colorize the type of buildings I am interested in, they all contantly gray. So the first obstacle was to add this parameter to the `box` function all of them use, and then pass it from one of the houses, till I found the convenient one: `arch02`:
+The first disappointment to wait for me was that buildings do not have `col`(or) parameter, so it is not that easy to colorize the type of buildings I am interested in, they all constantly gray. So the first obstacle was to add this parameter to the `box` function all of them use, and then pass it from one of the houses, till I found the convenient one: `arch02`:
 
 ![](image12.png)
 
@@ -30,7 +38,7 @@ First, as usual, update function's arguments to clean up the scene
 
 Now, to the body. It seems to do the following in one big cycle (`sto` times... still don't know what that should mean!):
 * add a `box`
-* add a `rail` but only if `rai` parameter is passed... aha, that answers one mistery about parameter naming _(aside note: there is only one call to `arch02` in the codebase, and it never passes `rai`... so, this part is effectively moot, but I'll leave it, and rename the parameter to `has_rails`)_
+* add a `rail` but only if `rai` parameter is passed... aha, that answers one mystery about parameter naming _(aside note: there is only one call to `arch02` in the codebase, and it never passes `rai`... so, this part is effectively moot, but I'll leave it, and rename the parameter to `has_rails`)_
 * adds roof (sometimes randomly attaching `Pizza Hut` placate, which is a nice touch!)
 
 So, can we do it in a usual `map`-style?.. Here is (half-baked) code:

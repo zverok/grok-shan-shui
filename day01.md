@@ -1,4 +1,4 @@
-# Day 01
+# Day 01: Advent of `Grok {Shan, Shui}*`
 
 While others solve their beloved puzzles from AoC, I wanted to have my own advent.
 
@@ -16,7 +16,7 @@ It is described as _"Procedurally-generated vector-format infinitely-scrolling C
 
 And it is _procedural_ (e.g. all the code that generates random pictures is written by hands, not some statistical model ML-trained on existing data).
 
-I want to _grok_ it, to understand how it works, and explain it to others in some form. That' what I'll be doing since December 1, 2021 (which is today when I am writing this line).
+I want to _[grok](https://en.wikipedia.org/wiki/Grok)_ it, to understand how it works, and explain it to others in some form. That' what I'll be doing since December 1, 2021 (which is today when I am writing this line).
 
 ## Why
 
@@ -24,11 +24,11 @@ The answer to _why_ would I want to spend my time on this (obviously impractical
 
 **First** I don't know a thing about procedural generation of humanely-looking art; can't even imagine how it might work. While I have no illusions about becoming proficient (I believe one should be a visual artist themself to work with generative art, and it is definitely not my media, I am very textual person), I'd like to _develop some intuitions_ on how those things work.
 
-**Second**, I'd like to _battle-test my intuitions_ about ways of expressing things in programming languages, what should look declarative, how to make the intention obvios, this kind of stuff. Textual person, as I've said! And programming language is first and foremost a language for me. I _hope_ that my _intuition_ (here again!) about the algorithms for this art object being expressable in functional/declarative manner would be proven close to reality. If they would be not, well... at least I will have an incentive to review them.
+**Second**, I'd like to _battle-test my intuitions_ about ways of expressing things in programming languages, what should look declarative, how to make the intention obvious, this kind of stuff. Textual person, as I've said! And programming language is first and foremost a language for me. I _hope_ that my _intuition_ (here again!) about the algorithms for this art object being expressible in functional/declarative manner would be proven close to reality. If they would be not, well... at least I will have an incentive to review them.
 
 ## How
 
-For me, the best way to understand something complex is to _translate_ it. This work both for natural language (at various points in time, I did a fair share of amateur translations of programming books, philosophical articles, body-mind essays and poetry between English, Ukrainian, Belarussian and Russian), and for software. I did translated some graphic algos from Wolfram Language into Ruby ([1](https://github.com/zverok/xkcdize), [2](https://github.com/zverok/drosterize)); APLs famous Game of Life [into Ruby, again](https://zverok.github.io/blog/2020-05-16-ruby-as-apl.html). And recently, I spent almost a year porting popular spellchecker into Python (and another half-a-year for a [writeup](https://zverok.github.io/spellchecker.html)).
+For me, the best way to understand something complex is to _translate_ it. This work both for natural language (at various points in time, I did a fair share of amateur translations of programming books, philosophical articles, body-mind essays and poetry between English, Ukrainian, Belarusian and Russian), and for software. I did translated some graphic algos from Wolfram Language into Ruby ([1](https://github.com/zverok/xkcdize), [2](https://github.com/zverok/drosterize)); some JS tree cloud [into Ruby](https://github.com/zverok/magic_cloud); APLs famous Game of Life [into Ruby, again](https://zverok.github.io/blog/2020-05-16-ruby-as-apl.html). And recently, I spent almost a year porting popular spellchecker into Python (and another half-a-year for a [writeup](https://zverok.github.io/spellchecker.html)).
 
 So, I thought that I'll just look into the [code](https://github.com/LingDong-/shan-shui-inf/blob/master/index.html) and... port it to some other language I am more comfortable with, maybe? Yet, from the first half-assed attempt to do it in a language I am most comfortable with (Ruby), I understood I'll probably spend more time trying to fight fighting with image libraries, converting coordinates, waiting in "change code-render-look at image" loop, and still wouldn't be sure "why it looks wrong".
 
@@ -36,4 +36,4 @@ So, I thought: why not try to translate from JS... to JS? I mean, the most moder
 
 With that, let's start. I plan to spend 30-60 minutes every day of Advent for experiments and notes; then (**if** something interesting will come up, and if I wouldn't give up much earlier), I'll tidy and publish it all.
 
-- Dec 01, 2021, 22:42
+> Dec 01, 2021, 22:42

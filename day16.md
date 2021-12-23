@@ -1,4 +1,10 @@
-## Day 16: Deeper into the mountain
+# Day 16: Deeper into the mountain
+
+* **Commit:** [0d87652](https://github.com/zverok/grok-shan-shui/commit/0d876529fdc72bd035c95769042b3d39f561dc55)
+* **Functions:**
+  * [`Mount.mountain`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L1804)
+* **Other days about:**
+  * `mountain`: [15](day15.md)—**16**—[17](day17.md)—[18](day18.md)—[19](day19.md)—[20](day20.md)
 
 So... We are looking into the `Mount.mountain` function, its peculiar `y`-first set of points, and its being `vegetate`d with trees, rocks and houses!
 
@@ -59,7 +65,7 @@ So, with each next layer the `expansion` coefficient shrinks from 1 towards 0, m
 
 ![](image44.png)
 
-Here is a picture of another experiment for you: if we'll temporarily replace `expansion` calculation with just `expansion = 1`, this would happen (lines aren't shifted towards montain center):
+Here is a picture of another experiment for you: if we'll temporarily replace `expansion` calculation with just `expansion = 1`, this would happen (lines aren't shifted towards mountain center):
 
 ![](image45.png)
 

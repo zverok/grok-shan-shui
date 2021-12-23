@@ -1,4 +1,10 @@
-## Day 20: REALLY wrapping up the mountain
+# Day 20: REALLY wrapping up the mountain
+
+* **Commit:** [a85eebb](https://github.com/zverok/grok-shan-shui/commit/a85eebbb4670968ef17fb84bff0ba94d7e0d9a74)
+* **Functions:**
+  * [`Mount.mountain`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L1804)
+* **Other days about:**
+  * `mountain`: [15](day15.md)—[16](day16.md)—[17](day17.md)—[18](day18.md)—[19](day19.md)—**20**
 
 So, that's what we have by this time in `Mountain.mountain`—one of the biggest points-of-entry to the entire picture, which (alongside `flatMount` and `water`) generates the most of the landscape.
 
@@ -141,7 +147,7 @@ Whooop. 131 lines. Given, it is one of the main, and the largest, functions to "
 
 Now, a bunch of random notices to say about it, in no particular order:
 
-1\. In a cases like this, I prefer (as one might noticed!) **dense code and long lines**. My Sublime is set to have an on-screen rulers marking line length 100—which I consider a soft-ish limit to "go behind that if you really need to", and at 120—which is self-imposed hard limit, "never go behind that". This, in particular, means that on my old 13" ThinkPad I never need to use horizontal scrolling... which explains the limits.
+1\. In a cases like this, I prefer (as one might've noticed!) **dense code and long lines**. My Sublime is set to have an on-screen rulers marking line length 100—which I consider a soft-ish limit to "go behind that if you really need to", and at 120—which is self-imposed hard limit, "never go behind that". This, in particular, means that on my old 13" ThinkPad I never need to use horizontal scrolling... which explains the limits.
 
 This approach to formatting might be considered unusual for some codebases (or even grave sin), but maybe you'll understand why I am striving for it: this way, on the very same old 13" laptop this what I can see on my full screen height:
 ![](image52.png)
@@ -168,4 +174,4 @@ I already bragged a bit about this a couple of days ago (remember `hypotenuse`?)
 
 ***
 
-And on this indecisive note I'll leave the function as it got. Tomorrow I'll start thinking about how the best to wrap up this tiresome and still fascinating investigation in some way that will be at least _somewhat_ publishable. Not sure it would be easy, or even really reachable goal, but I'll need some closure, don't I?
+And on this indecisive note I'll leave the function as it got. Tomorrow I'll start thinking about how the best to wrap up this tiresome and still fascinating investigation in some way that will be at least _somewhat_ publishable. Not sure it would be easy, or even really reachable goal, but I'll need some closure, won't I?

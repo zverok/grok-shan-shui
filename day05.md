@@ -1,5 +1,12 @@
 # Day 05: Moar treees!
 
+* **Commit:** [17eece5](https://github.com/zverok/grok-shan-shui/commit/17eece56ebc29dafc18d0c2b4469d342472ad2fe)
+* **Functions:**
+  * [`Tree.tree01`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L744)
+  * [`Tree.tree02`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L803)
+  * [`blob`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L578)
+* **Days about `tree01` function:** [02](day02.md)—[03](day03.md)—[04](day04.md)—**05**
+
 For the last days, I've refactored `tree01`. I am relatively happy with the result (random shifts in blob parameters aren't that clear for me yet), but let's do more trees to see how the developed patterns and undertandings might be applied.
 
 > Aside note: just today, I stumbled upon a [great article](https://christianheilmann.com/2021/11/01/developer-tools-secrets-that-shouldnt-be-secrets/) with tips about using browser's DevTools. The knowledge of the things you can do with `console` makes life so much easier, great timing! Thanks a lot, Christian!

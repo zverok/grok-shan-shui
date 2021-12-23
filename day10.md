@@ -1,4 +1,12 @@
-## Day 10: (there is no good pun with the word "stroke")
+# Day 10: (there are no good puns with the word "stroke")
+
+* **Commit:** [bc82ce6](https://github.com/zverok/grok-shan-shui/commit/bc82ce6788cb686ad8518e45e14ec648a215314c)
+* **Functions:**
+  * [`box`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L2609)
+  * [`stroke`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L516)
+  * [`deco`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L2689)
+* **Other days about:**
+  * `box`: [07](day07.md)—[08](day08.md)—[09](day09.md)—**10**
 
 So, let's continue to dig into the `box_` function—now, to the `stroke` call.
 
@@ -40,8 +48,6 @@ function stroke_(points,
     ([[distance, angle], [x, y]]) => [x - distance * Math.cos(angle), y - distance * Math.sin(angle)]
   )
 
-  console.log({transitions, points, vertexes_top, vertexes_bottom})
-
   return [
     points[0],
     ...vertexes_top,
@@ -57,7 +63,19 @@ function stroke_(points,
 
 ![](image24.png)
 
-Now, the last mystery of our `box_` call in original house was the `dec` parameter, where that house passed `deco` function (I _adore_) short names. Let's add it to debug script and see.
+> Somewhat jumping into the future (this particular paragraph is written on day 23, generic cleanup day): by the end of the investigation I allowed myself much more "Ruby-like" shortcuts. So, the array used in `return` was turned into this (which is definitely clearer for me, but YMMV):
+>
+> ```js
+>  return [
+>        points.first,
+>        ...vertexes_top,
+>        points.last,
+>        ...vertexes_bottom.reverse(),
+>        points.first
+>      ]. // and so on, as before
+>  ```
+
+Now, the last mystery of our `box_` call in original house was the `dec` parameter, where that house passed `deco` function (I _adore_ short names). Let's add it to debug script and see.
 
 Our call to `box_` will now look this way (mimicking the code from the `arch02`):
 ```js

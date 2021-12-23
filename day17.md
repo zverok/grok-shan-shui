@@ -1,4 +1,10 @@
-## Day 17: Let's Vegetate!
+# Day 17: Let's Vegetate!
+
+* **Commit:** [58f9e4c](https://github.com/zverok/grok-shan-shui/commit/58f9e4ccb4f10f3e2745f2057370deb42c033706)
+* **Functions:**
+  * [`Mount.mountain`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L1804)
+* **Other days about:**
+  * `mountain`: [15](day15.md)—[16](day16.md)—**17**—[18](day18.md)—[19](day19.md)—[20](day20.md)
 
 I am in Istanbul now. Always loved the city, it is an absolute beauty (I half-dream of some _generative art_ project which could've imitate the cozy narrow streets of Kadıköy... But we digressed.)
 
@@ -47,11 +53,11 @@ Two notes-to-self that I would like to address if I had infinite time to polish,
 1. `point[1]` would be much better have as `point.y`... everywhere. A lot of things to rewrite, though, I'll pass. Probably can be solved with more unpacking in function args (e.g. `[_, y]` instead of `point`)?..
 2. Personal thing, probably, but I really hate the `Math.` prefix for trivial things like `abs` or `floor`. The names are base and absolutely clear even without the prefix, and it just adds visual noise. Whatevs.
 
-Now, going through all the function calls (and with surprisingly low amount of probems to debug, save for stray `j is not defined` where I've forgot to rename something), I am gradually coming to understand what we need from `generate` even better. Though, one "wrong picture" still got there:
+Now, going through all the function calls (and with surprisingly low amount of problems to debug, save for stray `j is not defined` where I've forgot to rename something), I am gradually coming to understand what we need from `generate` even better. Though, one "wrong picture" still got there:
 
 ![](image46.png)
 
-...but comparing it to expected, I quickly saw that probably the problem started with call that generates `tree03` (remembering how the trees looks from early days), I quickly got the typo (at some point I just replaced `layer.length` check with `layers.length` accidentally, and math got all wrong... though this one might make the man thinking!)
+...but comparing it to expected, I quickly saw that probably the problem started with call that generates `tree03` (remembering how the trees looks from [early days](day06.md)), I quickly got the typo (at some point I just replaced `layer.length` check with `layers.length` accidentally, and math got all wrong... though this one might make the man thinking about how to avoid this kind of typos!)
 
 So, here is the the final version of the function:
 
@@ -69,4 +75,4 @@ function generate(objectFunc, {if: pointSelector, pointFilter = points => points
 
 Note that instead having `pointFilter` responsible to saying "whether THIS point is necessary", I moved all the responsibility of "filter this list of points" there—considering its usage, it makes things much clearer.
 
-Now, I am super-tired after the flight (it was delayed for 2 hours, and it is actually phisical "day 18" already...), so I'll finish with all the actual calls to `generate` and how they are express things now, tomorrow. Hopefully. With Istanbul, you never actually know!
+Now, I am super-tired after the flight (it was delayed for 2 hours, and it is actually physical "day 18" already...), so I'll finish with all the actual calls to `generate` and how they are express things now, tomorrow. Hopefully. With Istanbul, you never actually know!

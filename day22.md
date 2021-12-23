@@ -1,11 +1,14 @@
-## Day 22: Where were we?..
+# Day 22: Where were we?..
 
+* **Commit:** [2c025f0](https://github.com/zverok/grok-shan-shui/commit/2c025f0ec9a67edd14704bbd92586f57bde3647e)
+* **Functions:**
+  * [`calcViewBox`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L3995)
 
 TBH, it is actually already 2 in the morning of day 23, and I am in airport with a terrible headache; but I still have 40 min till the bus, so why not to pretend at least I am doing something ~~useful~~ interesting?..
 
 So, just one quick experiment: I am not sure how different chunks of the landscape are attached to each other to produce a smooth picture.
 
-I wanted to debugg it for a bit. As almost all of the "hand-drawing" lines have colors like `rgba(100,100,100,<opacity>)`, we can do quite brutal thing (temporary!):
+I wanted to debug it for a bit. As almost all of the "hand-drawing" lines have colors like `rgba(100,100,100,<opacity>)`, we can do quite brutal thing (temporary!):
 
 ```js
 function chunkrender(xmin, xmax) {

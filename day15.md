@@ -1,4 +1,10 @@
-## Day 15: Between the landscape and the tree
+# Day 15: Between the landscape and the tree
+
+* **Commit:** [4cae740](https://github.com/zverok/grok-shan-shui/commit/4cae7402f2599476db8e73442b753717be42e9e6)
+* **Functions:**
+  * [`Mount.mountain`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L1804)
+* **Other days about:**
+  * `mountain`: **15**—[16](day16.md)—[17](day17.md)—[18](day18.md)—[19](day19.md)—[20](day20.md)
 
 These last days I've looked into how the overall picture got _planned_ by `mountplanner` in a series of objects consisting of a `{tag, x, y}`, now let's see how those large objects (features of the landscape) are actually drawn. This will hopefully cover the entire process from the whole picture to a singular stick on it—at least, some paths (mountains with some houses and some trees), assuming others have more or less the same logic.
 

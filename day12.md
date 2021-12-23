@@ -1,4 +1,10 @@
-## Day 12: Seeing the forest behind the trees
+# Day 12: Seeing the forest behind the trees
+
+* **Commit:** [7e4a9a7](https://github.com/zverok/grok-shan-shui/commit/7e4a9a720ab3b55b1afac9f7a30b3a0fdbab69f2)
+* **Functions:**
+  * [`chunkloader`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L3845)
+* **Other days about:**
+  * `chunkloader`: **12**, [21](day21.md)
 
 Yesterday I finished with a thought that the way small items on the picture is defined became clearer now, and a wish to do a next approach top-down.
 
@@ -16,7 +22,7 @@ Actual picture at some point:
 
 The interesting thing to notice here: the decorations on walls of the house in the center of the picture is missing (I'll fix it in short), and it leads to an interesting effect: background stays the same, foreground changes (due to a different sequence of randomness when something is missing in the process). This will be useful to remember when we'll try to understand the bigger picture.
 
-(Oh, I just mistyped `decorator: decoration(...)` yesterday intstead of `decoration: decorator` in `box_` call from `arch02` and never noticed it! Weird nothing told be so... But whatever, I guess!)
+(Oh, I just mistyped `decorator: decoration(...)` yesterday instead of `decoration: decorator` in `box_` call from `arch02` and never noticed it! Weird nothing told me so... But whatever, I guess!)
 
 We are back to the right picture, and can start to investigate from the top.
 
@@ -86,7 +92,7 @@ var add = function(new_chunk) {
 };
 ```
 
-Basically, it finds where to put the chunk in the list of already generted chunks, so those with higher `y` would always be at the end of the list.
+Basically, it finds where to put the chunk in the list of already generated chunks, so those with higher `y` would always be at the end of the list.
 
 Now, the thing of the real next interest (leaving some of the `xmax`/`xmin` math behind) is that `mountplanner` thing: it seems to do the most of the non-trivial work by deciding "what would be on the next chunk"? Probably! Another "suspicious" candidates are `mountain`/`flatMount`/`distMount`—they probably generate a huge batches of picture.
 
@@ -101,9 +107,8 @@ This is what we'll see:
 
 ![](image36.png)
 
-
 So... It seems `mountplanner` just throws a bunch of stuff on top of each other, but the "stuff" is designed internally so that it would look good when reordered by its `y`, huh? Let's see.
 
 (Stars for 20 mins into 100-lines method with 5 loops and global variables.) But not today, should we? It is Sunday evening already all in all...
 
-So, the plan for tomorrow is: crack `mountplanner` to understand how it... well, plans its mountains (or, rather, large-scale landscape features). Then we'll see how those features are implemented, in general. That would be  half of the advent behind me, if we consider it to be 24 days. Which is not that meaninful for non-religious developer from the country celebrating Orthodox Christmas mostly, which is Jan 7—so I might stretch it till New Year, but we'll see.
+So, the plan for tomorrow is: crack `mountplanner` to understand how it... well, plans its mountains (or, rather, large-scale landscape features). Then we'll see how those features are implemented, in general. That would be  half of the advent behind me, if we consider it to be 24 days. Which is not that meaningful for non-religious developer from the country celebrating Orthodox Christmas mostly, which is Jan 7—so I might stretch it till New Year, but we'll see.

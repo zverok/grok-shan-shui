@@ -1,5 +1,13 @@
 # Day 08: What's in a box?
 
+* **Commit:** [282d09a](https://github.com/zverok/grok-shan-shui/commit/282d09aff35310575b2abecd106d649266729de2)
+* **Functions:**
+  * [`box`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L2609)
+  * [`div`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L627)
+* **Other days about:**
+  * `box`: [07](day07.md)—**08**—[09](day09.md)—[10](day10.md)
+  * `div`: **08**—[09](day09.md)
+
 Yesterday, I finished with getting stuck with `box`es (actually, parallelepipeds?.. ugh, let's stick with "box") the houses consist of. They are mathematically simpler than those blobs making the trees, but amount of simple arithmetic to get lost in is fascinating.
 
 After some head-scratching, I understood I need a separate debug-ground to just drew one box and see what's what. There is no randomness involved _inside_ the `box` and functions it depends upon, so we can just build and experiment freely. That's the time to deep a bit into the "harness" of HTML-with-SVG to copy only the small part of it.
@@ -66,6 +74,7 @@ p(ptlist)
 ```
 
 I have this:
+
 ![](image20.png)
 
 That's something to start with!

@@ -1,4 +1,10 @@
-## Day 19: Wrapping up the mountain
+# Day 19: Wrapping up the mountain
+
+* **Commit:** [0593c97](https://github.com/zverok/grok-shan-shui/commit/0593c97cbe4dd5f15c5b9c23b3e733f14ccc56ec)
+* **Functions:**
+  * [`Mount.mountain`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L1804)
+* **Other days about:**
+  * `mountain`: [15](day15.md)—[16](day16.md)—[17](day17.md)—[18](day18.md)—**19**—[20](day20.md)
 
 So... After yesterday philosophical explosion (sorry!), today I'll continue to handle the `mountain` statements one-by-one.
 

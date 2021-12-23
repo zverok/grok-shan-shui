@@ -1,4 +1,10 @@
-## Day 14: Mountain-planning, continued
+# Day 14: Mountain-planning, continued
+
+* **Commit:** [6ede154](https://github.com/zverok/grok-shan-shui/commit/6ede154618a49cb7ff1b50c5a6a23a273b44d4f3)
+* **Functions:**
+  * [`mountplanner`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L3706)
+* **Other days about:**
+  * `mountplanner`: [13](day13.md)—**14**
 
 Yesterday we did quite a few bad things to `mountplanner`, can we go further, though?
 
@@ -47,7 +53,7 @@ class MountainMap {
 
 Oh shoot.
 
-It is just ranged definitions (+ 10 more mins of debugging):
+It is just ranges definitions (+ 10 more mins of debugging, note `floor`/`ceil` change):
 ```js
     initRange(from, to) {
       range(Math.floor(from / this.step), Math.ceil(to / this.step)).forEach( i => this.data[i] ||= 0 )

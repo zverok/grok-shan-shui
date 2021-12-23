@@ -1,5 +1,13 @@
 # Day 9: Lines and boxes
 
+* **Commit:** [64562e4](https://github.com/zverok/grok-shan-shui/commit/64562e4c5c938ef6e1f98c2613134e4c338d7d2c)
+* **Functions:**
+  * [`box`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L2609)
+  * [`div`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L627)
+* **Other days about:**
+  * `box`: [07](day07.md)—[08](day08.md)—**09**—[10](day10.md)
+  * `div`: [08](day08.md)—**09**
+
 Yesterday, I've uncovered what `div` function does. Thinking a bit more of it, I understood that for _my_ comprehension, operations on sequences are more straightforward way to express things than arithmetic.
 
 I mean, look at the method code again:
@@ -84,7 +92,7 @@ if (transparent) {
 lines = lines.map( points => extrapolate(points, {num_of_midpoints: 5}) )
 ```
 
-Oh, something starts to get claerer... And, a few strokes...
+Oh, something starts to get clearer... And, a few strokes...
 
 ```js
 var left = -width/2

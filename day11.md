@@ -1,4 +1,10 @@
-## Day 11: Back to home
+# Day 11: Back to home
+
+* **Commit:** [4bd5721](https://github.com/zverok/grok-shan-shui/commit/4bd5721ab55b11f488d578357c2b947aefdc1d49)
+* **Functions:**
+  * [`Arch.arch02`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L3061)
+* **Other days about:**
+  * `arch02`: [07](day07.md), **11**
 
 Now, when we uncovered the `box`, we can return to the `arch02` as a whole. But after I made myself to have a separate debug file, I'll probably continue there for some time. I add a row to the table of pictures
 
@@ -131,7 +137,7 @@ var chance = (probability, action) => Math.random() < probability ? action() : u
 var if_ = (condition, action) => condition ? action() : undefined
 ```
 
-Which makes the bottom part of the funcion (rail & roof) into this:
+Which makes the bottom part of the function (rail & roof) into this:
 ```js
   // make walls, then...
   if_(has_rails, ()=>
@@ -153,7 +159,7 @@ Which makes the bottom part of the funcion (rail & roof) into this:
   })
 ```
 
-So, with 1 story building, a good chance is we'll see the easter egg!
+So, with 1 story building, a good chance is we'll see the Easter egg!
 
 ![](image33.png)
 
@@ -170,12 +176,12 @@ Instead, I took a couple minutes to think about the whole picture and what I've 
 1. I've got through three different ways of drawing trees, and one way of drawing houses in this picture.
 2. All of them aren't that mysterious now: trees are "two strait lines + a bunch of blobs among them", houses just a simple line geometry, just many lines combined.
 3. The way to make it look natural/hand-drawn is:
-  * some well-chosen constants;
-  * some randomness in parameters, but inside small ranges;
-  * some Perline noise (sequence of random values with smooth change between nearby values)
+  a) some well-chosen constants;
+  b) some randomness in parameters, but inside small ranges;
+  c) some Perlin noise (sequence of random values with smooth change between nearby values)
 4. I believe it required both a lot of drawing/artistic intuition, and geometry/computer imagery intuition of author to come up with this solution: to deconstruct some drawings in simple forms, and then, gather those forms back into nice random(ish) drawings
 5. To represent it all in a "declarative" code I am striving for, one might develop kind of a domain-specific language on top of a target one; this is at the same time obvious and half-formed thought I'll postpone till the end of the investigation.
 
 Till now, I've investigated the stuff from inside out: "how this particular unit of the picture is produced". We still have un-investigated units like boats and people; but tomorrow, I'll want to look on the bigger picture, and try to understand how the high-level decision on landscape composition is made. After that, I'll try to look at the mid-level and investigate the approach of the larger landscape features, like mountains and lakes.
 
-Still quite enthusiastic about the whole endeavor, suprisingly!
+Still quite enthusiastic about the whole endeavor, surprisingly!

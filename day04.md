@@ -1,5 +1,12 @@
 # Day 04: Making sense of the tree
 
+* **Commit:** [e8b1368](https://github.com/zverok/grok-shan-shui/commit/e8b1368a6681998b8f7bdaef543c5764ef0c7beb)
+* **Functions:**
+  * [`Tree.tree01`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L744)
+  * [`poly`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L485)
+  * [`blob`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L578)
+* **Days about `tree01` function:** [02](day02.md)—[03](day03.md)—**04**—[05](day05.md)
+
 Continuing right from the place where we stopped, I find myself uneasy about the names of things. I still remember loving short names like `ang` in my C++ days, and I still resent prevalent in some codebases multiword over-explanatory names like `angle_for_current_leaf`, but I mostly prefer 1-2 full words for a variable name. It is much easier to read aloud, if nothing else!
 
 So, what about this?
@@ -44,7 +51,7 @@ this.tree01 = function(x, y, {height = 50, width = 3, color = rgba(100,100,100,0
 };
 ```
 
-I needed to fix argument names in one place that calls `tree01`, and also the call-seqences of `blob` and `poly`. As the latter functions are called from everywhere, I just rewrote them into `blob_` and `poly_` with new API (and new code, because why not). `poly_` is self-evident (just generates an SVG polygon):
+I needed to fix argument names in one place that calls `tree01`, and also the signatures of `blob` and `poly`. As the latter functions are called from everywhere, I just rewrote them into `blob_` and `poly_` with new API (and new code, because why not). `poly_` is self-evident (just generates an SVG polygon):
 
 ```js
 function poly_(points, {x_offset = 0, y_offset = 0, fill = rgba(0, 0, 0, 0), stroke, width = 0}) {
@@ -150,6 +157,6 @@ At this point (when I decoupled crown blobs data generation from `blob_` calls),
 
 That's because again of `Math.random()` calls value order (`blob` uses it, too, so "generate random data for one blob → call `blob_`" vs "generate data for all blobs → for every data, call `blob_`" invokes different random numbers). But at this point of the investigation, it seems OK!
 
-And that's the end of Day-4 investigation.
+And that's the end of Day Four investigation.
 
 Next, with the developed understanding and tools, we'll switch to several other trees, and then to objects with completely different logic!

@@ -1,10 +1,14 @@
 # Day 02: Overview and starting to change the code
 
-The entirety of the project's code is in [one file](https://github.com/LingDong-/shan-shui-inf/blob/master/index.html), spanning some 4k lines, mostly of JS. That might seem esotheric by today's standards, but actually turns out to be convenient for keeping all the context in front of the eyes when "grokking" the project (and, I imagine, provides the same convenience when created it).
+* **Commit:** [d2ac581](https://github.com/zverok/grok-shan-shui/commit/d2ac5814aff6beca016df1e67ac38ce55cebec91)
+* **Function:** [`Tree.tree01`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L744) (generate one tree; link is to the original implementation)
+* **Days about this function:** **02**—[03](day03.md)—[04](day04.md)—[05](day05.md)
+
+The entirety of the project's code is in [one file](https://github.com/LingDong-/shan-shui-inf/blob/master/index.html), spanning some 4k lines, mostly of JS. That might seem esotheric by today's standards, but actually turns out to be convenient for keeping all the context in front of the eyes when "grokking" the project (and, I imagine, provides the same convenience when creating it).
 
 The quick overlook of the code allows to understand that:
 * it is in pretty old-school vanilla JS
-* the organization is very neat and simple: just a bunch of "classes/modules" like [`Tree`](https://github.com/LingDong-/shan-shui-inf/blob/master/index.html#L743), [`Mount`](https://github.com/LingDong-/shan-shui-inf/blob/master/index.html#L1727)(ain), [`Man`](https://github.com/LingDong-/shan-shui-inf/blob/master/index.html#L3324) and so on, with functions like `tree01`, `tree02` etc inside. Plus, there are a bunch of utilities at the beginning of the file (for drawing and random data generation), and some harness to put it all together closer to the end.
+* the organization is very neat and simple: just a bunch of "classes/modules" like [`Tree`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L743), [`Mount`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L1727)(ain), [`Man`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L3324) and so on, with functions like `tree01`, `tree02` etc inside. Plus, there are a bunch of utilities at the beginning of the file (for drawing and random data generation), and some harness to put it all together closer to the end.
 
 So, let's just start from the middle, the most "interesting" part: like, how some particular object on the image is drawn. We'll look into everything else on per-necessity basis, on the road.
 
@@ -72,7 +76,7 @@ this.tree01 = function(x, y, args) {
 };
 ```
 
-Before we start any attempt to refactor it, note that tree color is passed through parameters (it is invoked from [here](https://github.com/LingDong-/shan-shui-inf/blob/master/index.html#L1924)), but what if we'll change the color of the tree, so they would stand out of the image and we'll see what we are changing?
+Before we start any attempt to refactor it, note that tree color is passed through parameters (it is invoked from [here](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L1924)), but what if we'll change the color of the tree, so they would stand out of the image and we'll see what we are changing?
 
 Though... Even before that, let's stop our image from being random for now, let's just change a
 ```js
@@ -86,6 +90,7 @@ to a constant, shall we?
 ```
 
 This way, we can always look at the same part of the screen, at the same tree, expecting it to change (or, preferrably, not!) after refactoring. Here is the picture with a fixed SEED:
+
 ![](image01.png)
 
 Now, to tree color:
@@ -123,7 +128,7 @@ To something functional and exposing intention: "10 times, produce this value". 
 nslist = reso.times.map { |i| [Noise.noise(i * 0.5), Noise.noise(i * 0.5, 0.5)] }
 ```
 
-In JS (which, I should aknowledge, I am not really proficient with! especially the modern variety!) that's what I achievent eventually:
+In JS (which, I should acknowledge, I am not really proficient with! especially the modern variety!) that's what I achieved eventually:
 ```js
 function times(n, fun) {
   return Array.from({length: n}, (_, i) => fun(i));

@@ -1,5 +1,9 @@
 # Day 03: Fighting the tree
 
+* **Commit:** [868ea23](https://github.com/zverok/grok-shan-shui/commit/868ea23e79136f0c904e3d6385b01875b17663b6)
+* **Function:** [`Tree.tree01`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L744)
+* **Days about this function:** [02](day02.md)—**03**—[04](day04.md)—[05](day05.md)
+
 We are still on a task of understanding/rewriting `tree01` function!
 
 At this point, it is more or less obvious that `line1` and `line2` are producing tree trunk picture, and the remaining huge `for`, adding some `blob`s to `canv`, is responsible for the crown. Before I fight the `for`, what makes me icky is this way of constructing the colors:
@@ -105,9 +109,9 @@ Oh, now I got it.
 
 The "pseudo-randomness" of our random means, that each next call to `Math.random()` depends on how many times it was called before; so, if I'll port the cycle precisely, the rest of the landscape wouldn't be affected. That's the valuable lesson, helping to debug how it is going: if at some point mountains start to shift, I screwed up some of the tree algos!
 
-A bit of `console.log`-debugging... Oh, it should be just `.slice(reso / 4 + 1)` in my new cycle, we are back to the original picture (trust me on this, I'll feel dumb posting pictures of "nothing changed" ever time).
+A bit of `console.log`-debugging... Oh, it should be just `.slice(reso / 4 + 1)` in my new cycle, we are back to the original picture (trust me on this, I'll feel dumb posting pictures of "nothing changed" every time).
 
-Now, my eyes are harting with this `Math.random()` instances... Can we do this, instead?..
+Now, my eyes are hurting with this `Math.random()` instances... Can we do this, instead?..
 
 ```js
 var canv =

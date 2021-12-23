@@ -1,4 +1,12 @@
-## Day 21: Now what?
+# Day 21: Now what?
+
+* **Commit:** [32726a6](https://github.com/zverok/grok-shan-shui/commit/32726a6d3ea0e759e98cd2e9b7734dded10391d1)
+* **Functions:**
+  * [`chunkrender`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L3973)
+  * [`update`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L4017)
+  * [`chunkloader`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L3845)
+* **Other days about:**
+  * `chunkloader`: [12](day12.md), **21**
 
 "OK," I am thinking, looking at the state of this tedious investigation, "If we'll consider it an _advent_, after all, I have just 4 more days to spend somehow." How should I spend them?
 
@@ -174,4 +182,4 @@ STATE.chunks.put = function(newChunk) {
 };
 ```
 
-That would do the "overall structure" for me, even though (even though a temptation, say, to turn `while` into some sequential enumerator is high, I will resist it). This would do the day's work, too. Tomorrow, the new day. One thing to see to on the "global" level is how the smoothness of the transitions is achieved when chunks are put next to each other. Should be something simple yet ingenious.
+That would do the "overall structure" for me! (Even though though a temptation, say, to turn `while` into some sequential enumerator is high, I will resist it.) This would do the day's work, too. Tomorrow, the new day. One thing to see to on the "global" level is how the smoothness of the transitions is achieved when chunks are put next to each other. Should be something simple yet ingenious.

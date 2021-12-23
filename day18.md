@@ -1,4 +1,10 @@
-## Day 18: Generation details
+# Day 18: Generation details
+
+* **Commit:** [ebe5799](https://github.com/zverok/grok-shan-shui/commit/ebe579911bf4be057c2a3fa49f7194733c2d5160)
+* **Functions:**
+  * [`Mount.mountain`](https://github.com/zverok/grok-shan-shui/blob/main/original.html#L1804)
+* **Other days about:**
+  * `mountain`: [15](day15.md)—[16](day16.md)—[17](day17.md)—**18**—[19](day19.md)—[20](day20.md)
 
 So, yesterday we made initial `vegetate` generator function into fully-rewritten `generate`, and today let's see it applied.
 
@@ -65,7 +71,9 @@ Note that we need effectless `Math.random` to not break the randomness count (co
 
 ![](image48.png)
 
-Q.E.D.: `foot` generates footer lines for mountains! What a revelation.
+Q.E.D.: `foot` generates foot lines for mountains! What a revelation.
+
+> Actually, I could've guessed it without debugging, but I didn't know "foot" in English also means "bottom part of the mountain". In Ukrainian, we have a different word for it, not the same as for "bottom part of the leg".
 
 Next is, we generate a bit more of `tree02` for the mountain rim, now in front of its contour (ugh, so on a small picture above, some of the pine-like trees might've been from this call):
 
