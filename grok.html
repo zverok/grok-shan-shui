@@ -3975,8 +3975,9 @@
   }
 
   function calcViewBox() {
-    var zoom = 1.142;
-    return "" + STATE.cursorX + " 0 " + CONFIG.windowWidth / zoom + " " + CONFIG.windowHeight / zoom;
+    // var zoom = 1.142;
+    var zoom = 1;
+    return `${STATE.cursorX} 0 ${CONFIG.windowWidth / zoom} ${CONFIG.windowHeight / zoom}`;
   }
 
   function viewupdate() {
