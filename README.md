@@ -10,6 +10,6 @@ The reading/rewriting was done during Advent of 2021, by Victor Shepelev aka [zv
 * partially rewritten code in `grok.html`;
 * diary of the project in `day**.md` files.
 
-**See the [explanatory blog-post](https://zverok.github.io/blog/2021-12-28-grok-shan-shui-inf.html) for details and reading guide.**
+**See the [explanatory blog-post](https://zverok.github.io/blog/2021-12-28-grok-shan-shui.html) for details and reading guide.**
 
 **All rights for the source code belong to the original author**, see [original repo and its license](https://github.com/LingDong-/shan-shui-inf).
